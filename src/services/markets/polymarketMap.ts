@@ -67,11 +67,34 @@ export function deriveSignal(change24h: number, volume: number): AISignal {
  *  - uncertainty: markets near 50% are inherently more interesting than
  *    foregone conclusions at 2% or 98%
  */
+export interface ScoreComponents {
+  movement: number; // 0..1
+  liquidity: number; // 0..1
+  uncertainty: number; // 0..1
+}
+
+export const SCORE_WEIGHTS = { movement: 0.45, liquidity: 0.35, uncertainty: 0.2 } as const;
+
+export function scoreComponents(
+  change24h: number,
+  volume: number,
+  probability = 0.5,
+): ScoreComponents {
+  return {
+    movement: Math.min(1, Math.abs(change24h) / 0.1),
+    liquidity: Math.min(1, Math.log10(volume + 1) / 7), // 10M ≈ 1.0
+    uncertainty: 1 - Math.abs(probability - 0.5) * 2,
+  };
+}
+
 export function heuristicScore(change24h: number, volume: number, probability = 0.5): number {
-  const move = Math.min(1, Math.abs(change24h) / 0.1);
-  const liq = Math.min(1, Math.log10(volume + 1) / 7); // 10M ≈ 1.0
-  const uncertainty = 1 - Math.abs(probability - 0.5) * 2;
-  return Math.round((0.45 * move + 0.35 * liq + 0.2 * uncertainty) * 100);
+  const c = scoreComponents(change24h, volume, probability);
+  return Math.round(
+    (SCORE_WEIGHTS.movement * c.movement +
+      SCORE_WEIGHTS.liquidity * c.liquidity +
+      SCORE_WEIGHTS.uncertainty * c.uncertainty) *
+      100,
+  );
 }
 
 /** Pure mapping from a raw Polymarket market to Signal's `Market`. Returns null if unusable. */

@@ -5,8 +5,9 @@ import { useQuery } from '@tanstack/react-query';
 import { colors, radius, spacing, typography } from '@/theme';
 import { getMarketSource, getCombinedSource } from '@/services/markets';
 import { generateAnalysis } from '@/services/ai';
-import { Sparkline } from '@/components/Sparkline';
-import { SignalChip } from '@/components/Chip';
+import { ProbabilityChart } from '@/components/ProbabilityChart';
+import { ScoreExplainer } from '@/components/ScoreExplainer';
+import { SignalChip, PlatformBadge } from '@/components/Chip';
 import { useWatchlist } from '@/state/watchlist';
 import { useEntitlement } from '@/state/entitlement';
 import { getAiUsageToday, incrementAiUsage } from '@/state/usage';
@@ -23,6 +24,7 @@ export default function MarketDetailScreen() {
   const [analysis, setAnalysis] = useState<AIAnalysis | null>(null);
   const [loadingAI, setLoadingAI] = useState(false);
   const [gated, setGated] = useState(false);
+  const [showScore, setShowScore] = useState(false);
 
   const { data: market } = useQuery<Market | null>({
     queryKey: ['market', marketId],
@@ -82,26 +84,39 @@ export default function MarketDetailScreen() {
         }}
       />
 
-      <SignalChip signal={market.signal} />
+      <View style={styles.badgeRow}>
+        <PlatformBadge platform={market.platform} size="md" />
+        <SignalChip signal={market.signal} />
+      </View>
       <Text style={styles.title}>{market.title}</Text>
 
       <View style={styles.statsRow}>
         <Stat label="probability" value={pct(market.probability)} />
         <Stat label="24h" value={signedPct(market.change24h)} color={up ? colors.up : colors.down} />
         <Stat label="volume" value={compactUsd(market.volume)} />
-        <Stat label="signal score" value={String(market.aiScore ?? '—')} color={colors.accent} />
+        <Pressable onPress={() => setShowScore(true)} hitSlop={8}>
+          <Stat
+            label="signal score ⓘ"
+            value={String(market.aiScore ?? '—')}
+            color={colors.accent}
+          />
+        </Pressable>
       </View>
 
       <View style={styles.chartCard}>
         <View style={styles.chartHeader}>
           <Text style={styles.cardLabel}>Probability · past week</Text>
-          {history?.synthetic && <Text style={styles.syntheticTag}>SIMULATED PREVIEW</Text>}
+          {history?.synthetic ? (
+            <Text style={styles.syntheticTag}>SIMULATED PREVIEW</Text>
+          ) : (
+            <Text style={styles.scrubHint}>touch to inspect</Text>
+          )}
         </View>
-        <Sparkline data={snapshots} width={width - spacing.lg * 4} up={up} />
+        <ProbabilityChart data={snapshots} width={width - spacing.lg * 4} up={up} />
       </View>
 
       <View style={styles.card}>
-        <Text style={styles.cardLabel}>Platform comparison</Text>
+        <Text style={styles.cardLabel}>Platform availability</Text>
         <CompareRow label={market.platform} probability={market.probability} highlight />
         {comparables.length > 0 ? (
           comparables.map((c: Market) => (
@@ -114,10 +129,17 @@ export default function MarketDetailScreen() {
             </Pressable>
           ))
         ) : (
-          <Text style={styles.compareEmpty}>
-            No matching market found on other platforms yet.
-          </Text>
+          <View style={styles.exclusiveRow}>
+            <Text style={styles.compareEmpty}>
+              Only listed on {market.platform === 'polymarket' ? 'Polymarket' : 'Kalshi'} — no
+              equivalent market on {market.platform === 'polymarket' ? 'Kalshi' : 'Polymarket'}.
+            </Text>
+          </View>
         )}
+        <Text style={styles.compareFoot}>
+          Most questions trade on a single platform. When both list the same question, the spread
+          between their odds is shown.
+        </Text>
       </View>
 
       <Pressable style={[styles.saveBtn, saved && styles.saveBtnActive]} onPress={() => toggle(market)}>
@@ -151,6 +173,8 @@ export default function MarketDetailScreen() {
       ) : (
         <Analysis analysis={analysis} />
       )}
+
+      <ScoreExplainer market={market} visible={showScore} onClose={() => setShowScore(false)} />
     </ScrollView>
   );
 }
@@ -186,7 +210,7 @@ function CompareRow({
   spread,
   highlight = false,
 }: {
-  label: string;
+  label: 'polymarket' | 'kalshi';
   probability: number;
   spread?: number;
   highlight?: boolean;
@@ -194,15 +218,15 @@ function CompareRow({
   const spreadPts = spread != null ? Math.round(spread * 100) : null;
   return (
     <View style={styles.metaRow}>
-      <Text style={[styles.metaLabel, highlight && { color: colors.text }, { textTransform: 'capitalize' }]}>
-        {label}
-        {highlight ? '  (this market)' : ''}
-      </Text>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+        <PlatformBadge platform={label} />
+        {highlight && <Text style={styles.thisMarket}>this market</Text>}
+      </View>
       <View style={{ flexDirection: 'row', gap: spacing.sm }}>
         {spreadPts != null && spreadPts !== 0 && (
           <Text style={[styles.metaValue, { color: spreadPts > 0 ? colors.up : colors.down }]}>
             {spreadPts > 0 ? '+' : ''}
-            {spreadPts}
+            {spreadPts} pts
           </Text>
         )}
         <Text style={styles.metaValue}>{pct(probability)}</Text>
@@ -266,6 +290,10 @@ const styles = StyleSheet.create({
     letterSpacing: 0.8,
     color: colors.warn,
   },
+  scrubHint: { fontSize: 10, color: colors.textFaint, fontStyle: 'italic' },
+  badgeRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  exclusiveRow: { paddingVertical: spacing.xs },
+  compareFoot: { fontSize: 11, color: colors.textFaint, lineHeight: 16, marginTop: spacing.xs },
   aiDisclaimer: { ...typography.caption, color: colors.textFaint, marginTop: -spacing.sm },
   cardLabel: { ...typography.bodyStrong, color: colors.textMuted },
   cardBody: { ...typography.body, color: colors.text, lineHeight: 21 },
@@ -307,5 +335,6 @@ const styles = StyleSheet.create({
   metaRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 2 },
   metaLabel: { color: colors.textMuted, ...typography.body },
   metaValue: { color: colors.text, ...typography.mono },
-  compareEmpty: { ...typography.caption, color: colors.textFaint },
+  compareEmpty: { ...typography.caption, color: colors.textMuted, lineHeight: 18 },
+  thisMarket: { fontSize: 11, color: colors.textFaint, fontStyle: 'italic' },
 });

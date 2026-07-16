@@ -42,3 +42,42 @@ export function recommendFeed({ markets, interests, experience }: Recommendation
     .sort((a, b) => b.s - a.s)
     .map((x) => x.m);
 }
+
+export interface RankedMarket {
+  market: Market;
+  /** Short human-readable reason this market surfaced, e.g. "Moved +8% · your interest: Finance". */
+  reason: string;
+}
+
+const CATEGORY_LABEL: Record<string, string> = {
+  politics: 'Politics',
+  finance: 'Finance',
+  crypto: 'Crypto',
+  sports: 'Sports',
+  world: 'World',
+  technology: 'Technology',
+};
+
+/** Why did this market make the briefing? Lead with the strongest factor. */
+export function explainPick(market: Market, interests: Category[]): string {
+  const parts: string[] = [];
+  const movePts = Math.round(market.change24h * 100);
+  if (Math.abs(movePts) >= 3) parts.push(`Moved ${movePts > 0 ? '+' : ''}${movePts}% today`);
+  if (interests.includes(market.category)) {
+    parts.push(`your interest: ${CATEGORY_LABEL[market.category] ?? market.category}`);
+  }
+  if (parts.length === 0) {
+    if (Math.abs(market.probability - 0.5) < 0.12) parts.push('Genuinely contested odds');
+    else if (market.volume > 1_000_000) parts.push('Heavy trading volume');
+    else parts.push('High signal score');
+  }
+  return parts.join(' · ');
+}
+
+/** Ranked briefing with per-pick reasons, for the Home feed. */
+export function recommendFeedDetailed(input: RecommendationInput): RankedMarket[] {
+  return recommendFeed(input).map((market) => ({
+    market,
+    reason: explainPick(market, input.interests),
+  }));
+}

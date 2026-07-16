@@ -3,7 +3,7 @@ import { Pressable, ScrollView, Text, View, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 import { colors, radius, spacing, typography } from '@/theme';
-import { PLANS } from '@/data/subscriptions';
+import { PLANS, FEATURE_DETAILS } from '@/data/subscriptions';
 import { useEntitlement } from '@/state/entitlement';
 import type { PlanTier } from '@/types';
 
@@ -12,6 +12,7 @@ export default function PaywallScreen() {
   const { highlight } = useLocalSearchParams<{ highlight?: string }>();
   const [busy, setBusy] = useState<PlanTier | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [expanded, setExpanded] = useState<PlanTier | null>(null);
 
   async function buy(t: Exclude<PlanTier, 'free'>) {
     setBusy(t);
@@ -39,20 +40,28 @@ export default function PaywallScreen() {
         {PLANS.filter((p) => p.tier !== 'free').map((p) => {
           const isCurrent = tier === p.tier;
           const isHighlight = highlight === p.tier || (!highlight && p.tier === 'pro');
+          const isExpanded = expanded === p.tier;
           return (
-            <View
+            <Pressable
               key={p.tier}
               style={[styles.plan, isHighlight && styles.planHighlight]}
+              onPress={() => setExpanded(isExpanded ? null : p.tier)}
             >
               <View style={styles.planHead}>
                 <Text style={styles.planName}>{p.name}</Text>
                 <Text style={styles.planPrice}>{p.priceLabel}</Text>
               </View>
               {p.features.map((f) => (
-                <Text key={f} style={styles.feature}>
-                  ✓ {f}
-                </Text>
+                <View key={f} style={styles.featureBlock}>
+                  <Text style={styles.feature}>✓ {f}</Text>
+                  {isExpanded && FEATURE_DETAILS[f] && (
+                    <Text style={styles.featureDetail}>{FEATURE_DETAILS[f]}</Text>
+                  )}
+                </View>
               ))}
+              <Text style={styles.expandHint}>
+                {isExpanded ? 'Tap to collapse' : 'Tap to see what each feature includes'}
+              </Text>
               <Pressable
                 style={[styles.buy, isCurrent && styles.buyOwned]}
                 disabled={isCurrent || busy !== null}
@@ -62,7 +71,7 @@ export default function PaywallScreen() {
                   {isCurrent ? 'Current plan' : busy === p.tier ? 'Processing…' : `Choose ${p.name}`}
                 </Text>
               </Pressable>
-            </View>
+            </Pressable>
           );
         })}
 
@@ -98,6 +107,15 @@ const styles = StyleSheet.create({
   planName: { ...typography.heading, color: colors.text },
   planPrice: { ...typography.mono, color: colors.accent },
   feature: { ...typography.caption, color: colors.textMuted, lineHeight: 22 },
+  featureBlock: { gap: 2 },
+  featureDetail: {
+    fontSize: 12,
+    color: colors.textFaint,
+    lineHeight: 17,
+    paddingLeft: spacing.lg,
+    paddingBottom: spacing.xs,
+  },
+  expandHint: { fontSize: 11, color: colors.accent, marginTop: spacing.xs },
   buy: { backgroundColor: colors.accent, borderRadius: radius.md, paddingVertical: spacing.md, alignItems: 'center', marginTop: spacing.md },
   buyOwned: { backgroundColor: colors.surfaceElevated },
   buyText: { color: colors.bg, fontWeight: '700' },

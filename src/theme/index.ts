@@ -26,6 +26,11 @@ export const colors = {
   signalWatch: '#4E8DFF',
   signalNeutral: '#9BA1AC',
   signalCaution: '#FFB020',
+  // platform identities — keep these visually distinct everywhere
+  polymarket: '#8B7CFF',
+  polymarketDim: '#1E1A38',
+  kalshi: '#00C2A8',
+  kalshiDim: '#0A2622',
 } as const;
 
 export const spacing = {

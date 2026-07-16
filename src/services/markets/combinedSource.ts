@@ -36,34 +36,51 @@ export class CombinedSource implements MarketDataSource {
 
   /**
    * Cross-platform comparison: find markets on other platforms that appear to
-   * be the same question, by fuzzy title overlap. Used by the detail screen.
+   * be the same question. Same category + keyword overlap, with proper-noun /
+   * number matches weighted double (the entities are what identify a question:
+   * "Fed", "September", "Trump", "100k"). Returns the best matches first, max 2 —
+   * most markets are platform-exclusive, and the UI says so honestly.
    */
   async findComparables(market: Market): Promise<Market[]> {
     const all = await this.listMarkets();
     const keys = titleKeywords(market.title);
-    return all.filter(
-      (m) =>
-        m.platform !== market.platform &&
-        overlap(keys, titleKeywords(m.title)) >= 0.5,
-    );
+    return all
+      .filter((m) => m.platform !== market.platform && m.category === market.category)
+      .map((m) => ({ m, score: overlap(keys, titleKeywords(m.title)) }))
+      .filter((x) => x.score >= 0.55)
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 2)
+      .map((x) => x.m);
   }
 }
 
-const STOP = new Set(['will', 'the', 'a', 'an', 'in', 'by', 'of', 'to', 'on', 'be', 'is', 'at', 'for', 'and', 'or']);
+const STOP = new Set([
+  'will', 'the', 'a', 'an', 'in', 'by', 'of', 'to', 'on', 'be', 'is', 'at', 'for', 'and', 'or',
+  'who', 'what', 'which', 'when', 'how', 'next', 'before', 'after', 'end', 'win', 'winner',
+]);
 
-export function titleKeywords(title: string): Set<string> {
-  return new Set(
-    title
-      .toLowerCase()
-      .replace(/[^a-z0-9\s]/g, ' ')
-      .split(/\s+/)
-      .filter((w) => w.length > 1 && !STOP.has(w)),
-  );
+/** Keywords weighted by identifying power: numbers and rare tokens count double. */
+export function titleKeywords(title: string): Map<string, number> {
+  const out = new Map<string, number>();
+  const words = title
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, ' ')
+    .split(/\s+/)
+    .filter((w) => w.length > 1 && !STOP.has(w));
+  for (const w of words) {
+    // Numbers, years, and long distinctive tokens are the identifying entities.
+    const weight = /\d/.test(w) || w.length >= 6 ? 2 : 1;
+    out.set(w, Math.max(out.get(w) ?? 0, weight));
+  }
+  return out;
 }
 
-export function overlap(a: Set<string>, b: Set<string>): number {
+/** Weighted overlap: shared identifying tokens / smaller side's total weight. */
+export function overlap(a: Map<string, number>, b: Map<string, number>): number {
   if (a.size === 0 || b.size === 0) return 0;
-  let hits = 0;
-  for (const w of a) if (b.has(w)) hits++;
-  return hits / Math.min(a.size, b.size);
+  let shared = 0;
+  for (const [w, wt] of a) if (b.has(w)) shared += Math.max(wt, b.get(w)!);
+  const totalA = [...a.values()].reduce((s, v) => s + v, 0);
+  const totalB = [...b.values()].reduce((s, v) => s + v, 0);
+  return shared / Math.min(totalA, totalB);
 }
