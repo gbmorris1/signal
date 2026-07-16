@@ -28,8 +28,9 @@ function AuthGate() {
     } else if (isAuthed && needsOnboarding && !onOnboarding) {
       // Signed in but hasn't finished onboarding.
       router.replace('/onboarding');
-    } else if (canBrowse && !needsOnboarding && (onAuth || onOnboarding)) {
-      // Finished the entry flow → land in the app.
+    } else if (isAuthed && !needsOnboarding && (onAuth || onOnboarding)) {
+      // Fully signed in → done with the entry flow. (Demo users may still
+      // visit /auth deliberately to create an account — don't bounce them.)
       router.replace('/(tabs)');
     }
   }, [loading, isAuthed, demo, needsOnboarding, segments, router]);

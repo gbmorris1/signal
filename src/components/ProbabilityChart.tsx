@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { PanResponder, Text, View, StyleSheet } from 'react-native';
 import Svg, { Path, Circle, Line, Defs, LinearGradient, Stop } from 'react-native-svg';
 import { colors, radius, spacing } from '@/theme';
@@ -67,10 +67,21 @@ export function ProbabilityChart({
     return { pts, min, max, innerW };
   }, [data, width, height]);
 
+  // The pan responder is created once, so it must read live values through a
+  // ref — capturing `geom`/`data` directly would freeze the first (empty)
+  // render's values and the scrub would never respond.
+  const live = useRef({ innerW: 0, count: 0 });
+  useEffect(() => {
+    live.current = { innerW: geom?.innerW ?? 0, count: data.length };
+  }, [geom, data.length]);
+
   const pan = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => true,
       onMoveShouldSetPanResponder: () => true,
+      // Don't let the parent ScrollView steal the gesture mid-scrub.
+      onPanResponderTerminationRequest: () => false,
+      onShouldBlockNativeResponder: () => true,
       onPanResponderGrant: (e) => locate(e.nativeEvent.locationX),
       onPanResponderMove: (e) => locate(e.nativeEvent.locationX),
       onPanResponderRelease: () => setScrub(null),
@@ -79,10 +90,11 @@ export function ProbabilityChart({
   ).current;
 
   function locate(x: number) {
-    if (!geom) return;
-    const t = (x - PAD_X) / geom.innerW;
-    const idx = Math.round(t * (data.length - 1));
-    setScrub(Math.min(data.length - 1, Math.max(0, idx)));
+    const { innerW, count } = live.current;
+    if (innerW <= 0 || count < 2) return;
+    const t = (x - PAD_X) / innerW;
+    const idx = Math.round(t * (count - 1));
+    setScrub(Math.min(count - 1, Math.max(0, idx)));
   }
 
   if (!geom) return <View style={{ width, height }} />;

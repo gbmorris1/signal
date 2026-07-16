@@ -15,6 +15,7 @@ export const MOCK_MARKETS: Market[] = [
     aiScore: 78,
     signal: 'opportunity',
     updatedAt: now,
+    outcomeLabels: ['Yes', 'No'] as [string, string],
   },
   {
     id: 'polymarket:btc-100k-2026',
@@ -28,6 +29,7 @@ export const MOCK_MARKETS: Market[] = [
     aiScore: 64,
     signal: 'watch',
     updatedAt: now,
+    outcomeLabels: ['Yes', 'No'] as [string, string],
   },
   {
     id: 'polymarket:us-election-turnout',
@@ -41,6 +43,7 @@ export const MOCK_MARKETS: Market[] = [
     aiScore: 51,
     signal: 'neutral',
     updatedAt: now,
+    outcomeLabels: ['Yes', 'No'] as [string, string],
   },
   {
     id: 'polymarket:nba-finals-favorite',
@@ -54,6 +57,7 @@ export const MOCK_MARKETS: Market[] = [
     aiScore: 72,
     signal: 'opportunity',
     updatedAt: now,
+    outcomeLabels: ['Yes', 'No'] as [string, string],
   },
   {
     id: 'polymarket:ai-regulation-2026',
@@ -67,6 +71,7 @@ export const MOCK_MARKETS: Market[] = [
     aiScore: 44,
     signal: 'caution',
     updatedAt: now,
+    outcomeLabels: ['Yes', 'No'] as [string, string],
   },
   {
     id: 'polymarket:global-ceasefire',
@@ -80,6 +85,7 @@ export const MOCK_MARKETS: Market[] = [
     aiScore: 58,
     signal: 'watch',
     updatedAt: now,
+    outcomeLabels: ['Yes', 'No'] as [string, string],
   },
 ];
 

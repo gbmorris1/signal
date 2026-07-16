@@ -85,6 +85,9 @@ export function mapKalshiMarket(event: KalshiRawEvent, raw: KalshiRawMarket): Ma
     signal: deriveSignal(change24h, volume),
     updatedAt: new Date().toISOString(),
     historyRef: `${series}/${ticker}`,
+    // For outcome legs the "yes" side IS the named outcome (a person/answer);
+    // the "no" side is everyone/everything else.
+    outcomeLabels: multi && sub ? [sub, 'Field'] : ['Yes', 'No'],
   };
 }
 

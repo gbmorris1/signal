@@ -28,6 +28,11 @@ export interface Market {
   updatedAt: string;
   /** Opaque reference for fetching real price history (platform-specific). */
   historyRef?: string;
+  /**
+   * The two outcome names. `probability` always refers to the FIRST outcome.
+   * Usually ['Yes','No'], but e.g. ['Norris','Verstappen'] on head-to-heads.
+   */
+  outcomeLabels: [string, string];
 }
 
 export interface MarketSnapshot {

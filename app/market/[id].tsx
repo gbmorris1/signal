@@ -7,6 +7,7 @@ import { getMarketSource, getCombinedSource } from '@/services/markets';
 import { generateAnalysis } from '@/services/ai';
 import { ProbabilityChart } from '@/components/ProbabilityChart';
 import { ScoreExplainer } from '@/components/ScoreExplainer';
+import { OutcomeSplit } from '@/components/OutcomeSplit';
 import { SignalChip, PlatformBadge } from '@/components/Chip';
 import { useWatchlist } from '@/state/watchlist';
 import { useEntitlement } from '@/state/entitlement';
@@ -90,8 +91,12 @@ export default function MarketDetailScreen() {
       </View>
       <Text style={styles.title}>{market.title}</Text>
 
+      <View style={styles.card}>
+        <OutcomeSplit market={market} size="lg" />
+      </View>
+
       <View style={styles.statsRow}>
-        <Stat label="probability" value={pct(market.probability)} />
+        <Stat label={market.outcomeLabels[0].toLowerCase()} value={pct(market.probability)} />
         <Stat label="24h" value={signedPct(market.change24h)} color={up ? colors.up : colors.down} />
         <Stat label="volume" value={compactUsd(market.volume)} />
         <Pressable onPress={() => setShowScore(true)} hitSlop={8}>

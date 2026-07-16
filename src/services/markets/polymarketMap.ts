@@ -111,6 +111,10 @@ export function mapPolymarketMarket(raw: PolymarketRaw): Market | null {
   const category = mapCategory(raw.category, question);
   const externalId = String(raw.slug ?? raw.id ?? question);
   const clobTokens = parseJsonArray(raw.clobTokenIds);
+  // Real outcome names when present ("Norris"/"Verstappen"), else Yes/No.
+  const outcomes = parseJsonArray(raw.outcomes);
+  const outcomeLabels: [string, string] =
+    outcomes.length >= 2 ? [outcomes[0], outcomes[1]] : ['Yes', 'No'];
 
   return {
     id: `polymarket:${externalId}`,
@@ -125,5 +129,6 @@ export function mapPolymarketMarket(raw: PolymarketRaw): Market | null {
     signal: deriveSignal(change24h, volume),
     updatedAt: new Date().toISOString(),
     historyRef: clobTokens[0], // YES token id → CLOB prices-history
+    outcomeLabels,
   };
 }

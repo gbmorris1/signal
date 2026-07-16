@@ -77,7 +77,11 @@ export default function ProfileScreen() {
       {PLANS.map((p) => {
         const current = tier === p.tier;
         return (
-          <View key={p.tier} style={[styles.plan, current && { borderColor: colors.accent }]}>
+          <Pressable
+            key={p.tier}
+            style={[styles.plan, current && { borderColor: colors.accent }]}
+            onPress={() => router.push(p.tier === 'free' ? '/paywall' : `/paywall?highlight=${p.tier}`)}
+          >
             <View style={styles.planHead}>
               <Text style={styles.planName}>{p.name}</Text>
               <Text style={styles.planPrice}>{p.priceLabel}</Text>
@@ -87,8 +91,12 @@ export default function ProfileScreen() {
                 • {f}
               </Text>
             ))}
-            {current && <Text style={styles.current}>Current plan</Text>}
-          </View>
+            {current ? (
+              <Text style={styles.current}>Current plan</Text>
+            ) : (
+              <Text style={styles.planLink}>View details & upgrade →</Text>
+            )}
+          </Pressable>
         );
       })}
 
@@ -151,6 +159,7 @@ const styles = StyleSheet.create({
   planPrice: { ...typography.mono, color: colors.accent },
   feature: { ...typography.caption, color: colors.textMuted, lineHeight: 20 },
   current: { ...typography.caption, color: colors.accent, marginTop: spacing.xs, fontWeight: '600' },
+  planLink: { ...typography.caption, color: colors.accent, marginTop: spacing.xs, fontWeight: '600' },
   signout: { alignItems: 'center', paddingVertical: spacing.md, marginTop: spacing.sm },
   signoutText: { color: colors.down, fontWeight: '600' },
 });

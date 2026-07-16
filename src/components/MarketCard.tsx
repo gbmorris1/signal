@@ -4,6 +4,7 @@ import { router } from 'expo-router';
 import { colors, radius, spacing, typography } from '@/theme';
 import { pct, signedPct, compactUsd } from '@/lib/format';
 import { SignalChip, PlatformBadge } from './Chip';
+import { OutcomeSplit } from './OutcomeSplit';
 import type { Market } from '@/types';
 
 export function MarketCard({ market, reason }: { market: Market; reason?: string }) {
@@ -45,15 +46,16 @@ export function MarketCard({ market, reason }: { market: Market; reason?: string
           </View>
         )}
 
+        <OutcomeSplit market={market} />
+
         <View style={styles.bottomRow}>
           <View style={styles.oddsBlock}>
-            <Text style={styles.prob}>{pct(market.probability)}</Text>
             {!flat && (
               <View
                 style={[styles.deltaPill, { backgroundColor: up ? colors.upDim : colors.downDim }]}
               >
                 <Text style={[styles.deltaText, { color: up ? colors.up : colors.down }]}>
-                  {signedPct(market.change24h)}
+                  {signedPct(market.change24h)} today
                 </Text>
               </View>
             )}

@@ -9,6 +9,7 @@ import {
   StyleSheet,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { router } from 'expo-router';
 import { colors, radius, spacing, typography } from '@/theme';
 import { useAuth, hasSupabase } from '@/state/auth';
 
@@ -109,7 +110,13 @@ export default function AuthScreen() {
             </Text>
           </Pressable>
 
-          <Pressable style={styles.secondary} onPress={enterDemo}>
+          <Pressable
+            style={styles.secondary}
+            onPress={() => {
+              enterDemo();
+              router.replace('/(tabs)');
+            }}
+          >
             <Text style={styles.secondaryText}>Explore demo first →</Text>
           </Pressable>
 
