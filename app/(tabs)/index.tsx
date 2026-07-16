@@ -8,6 +8,7 @@ import { colors, radius, spacing, typography } from '@/theme';
 import { getMarketSource } from '@/services/markets';
 import { recommendFeedDetailed, type RankedMarket } from '@/services/recommend';
 import { MarketCard } from '@/components/MarketCard';
+import { AnimatedNumber, Enter } from '@/components/motion';
 import { signedPct } from '@/lib/format';
 import { useAuth } from '@/state/auth';
 import type { Market } from '@/types';
@@ -70,19 +71,34 @@ export default function HomeScreen() {
             </Text>
 
             {!isLoading && data.length > 0 && (
-              <View style={styles.heroStrip}>
-                <HeroStat value={String(data.length)} label="markets tracked" />
-                <View style={styles.heroDivider} />
-                <HeroStat
-                  value={biggestMover ? signedPct(biggestMover.change24h) : '—'}
-                  label="biggest move"
-                  color={
-                    biggestMover && biggestMover.change24h < 0 ? colors.down : colors.up
-                  }
-                />
-                <View style={styles.heroDivider} />
-                <HeroStat value={String(platforms)} label={platforms === 1 ? 'platform' : 'platforms'} />
-              </View>
+              <Enter>
+                <View style={styles.heroStrip}>
+                  <View style={styles.heroStat}>
+                    <AnimatedNumber value={data.length} style={styles.heroValue} />
+                    <Text style={styles.heroLabel}>markets tracked</Text>
+                  </View>
+                  <View style={styles.heroDivider} />
+                  <View style={styles.heroStat}>
+                    <AnimatedNumber
+                      value={biggestMover ? biggestMover.change24h * 100 : 0}
+                      format={(v) => `${v >= 0 ? '+' : ''}${Math.round(v)}%`}
+                      style={[
+                        styles.heroValue,
+                        {
+                          color:
+                            biggestMover && biggestMover.change24h < 0 ? colors.down : colors.up,
+                        },
+                      ]}
+                    />
+                    <Text style={styles.heroLabel}>biggest move</Text>
+                  </View>
+                  <View style={styles.heroDivider} />
+                  <View style={styles.heroStat}>
+                    <AnimatedNumber value={platforms} style={styles.heroValue} />
+                    <Text style={styles.heroLabel}>{platforms === 1 ? 'platform' : 'platforms'}</Text>
+                  </View>
+                </View>
+              </Enter>
             )}
 
             <View style={styles.sectionRow}>
@@ -94,8 +110,10 @@ export default function HomeScreen() {
             </View>
           </View>
         }
-        renderItem={({ item }: { item: RankedMarket }) => (
-          <MarketCard market={item.market} reason={item.reason} />
+        renderItem={({ item, index }: { item: RankedMarket; index: number }) => (
+          <Enter index={index}>
+            <MarketCard market={item.market} reason={item.reason} />
+          </Enter>
         )}
         ItemSeparatorComponent={() => <View style={{ height: spacing.md }} />}
         ListEmptyComponent={isLoading ? <SkeletonCards /> : null}
@@ -103,15 +121,6 @@ export default function HomeScreen() {
 
       <HowItWorks visible={showHow} onClose={() => setShowHow(false)} hasInterests={interests.length > 0} />
     </SafeAreaView>
-  );
-}
-
-function HeroStat({ value, label, color = colors.text }: { value: string; label: string; color?: string }) {
-  return (
-    <View style={styles.heroStat}>
-      <Text style={[styles.heroValue, { color }]}>{value}</Text>
-      <Text style={styles.heroLabel}>{label}</Text>
-    </View>
   );
 }
 
@@ -139,7 +148,7 @@ function HowItWorks({
   hasInterests: boolean;
 }) {
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <Pressable style={styles.backdrop} onPress={onClose}>
         <Pressable style={styles.sheet} onPress={() => {}}>
           <Text style={styles.sheetTitle}>How your briefing is built</Text>
@@ -202,7 +211,13 @@ const styles = StyleSheet.create({
     marginTop: spacing.lg,
   },
   heroStat: { flex: 1, alignItems: 'center' },
-  heroValue: { fontSize: 20, fontWeight: '700', fontVariant: ['tabular-nums'], letterSpacing: -0.4 },
+  heroValue: {
+    fontSize: 20,
+    fontWeight: '700',
+    fontVariant: ['tabular-nums'],
+    letterSpacing: -0.4,
+    color: colors.text,
+  },
   heroLabel: { fontSize: 10, color: colors.textFaint, marginTop: 2, letterSpacing: 0.3 },
   heroDivider: { width: 1, height: 26, backgroundColor: colors.border },
   sectionRow: {

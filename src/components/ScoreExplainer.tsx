@@ -43,7 +43,7 @@ export function ScoreExplainer({
   const c = scoreComponents(market.change24h, market.volume, market.probability);
 
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <Pressable style={styles.backdrop} onPress={onClose}>
         <Pressable style={styles.sheet} onPress={() => {}}>
           <View style={styles.scoreRow}>

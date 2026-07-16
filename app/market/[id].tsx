@@ -8,6 +8,8 @@ import { generateAnalysis } from '@/services/ai';
 import { ProbabilityChart } from '@/components/ProbabilityChart';
 import { ScoreExplainer } from '@/components/ScoreExplainer';
 import { OutcomeSplit } from '@/components/OutcomeSplit';
+import { AnimatedNumber, Enter } from '@/components/motion';
+import * as Haptics from 'expo-haptics';
 import { SignalChip, PlatformBadge } from '@/components/Chip';
 import { useWatchlist } from '@/state/watchlist';
 import { useEntitlement } from '@/state/entitlement';
@@ -71,9 +73,18 @@ export default function MarketDetailScreen() {
       const result = await generateAnalysis(market, snapshots);
       await incrementAiUsage();
       setAnalysis(result);
+      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } finally {
       setLoadingAI(false);
     }
+  }
+
+  function onToggleSave() {
+    if (!market) return;
+    void Haptics.impactAsync(
+      saved ? Haptics.ImpactFeedbackStyle.Light : Haptics.ImpactFeedbackStyle.Medium,
+    );
+    toggle(market);
   }
 
   return (
@@ -96,7 +107,14 @@ export default function MarketDetailScreen() {
       </View>
 
       <View style={styles.statsRow}>
-        <Stat label={market.outcomeLabels[0].toLowerCase()} value={pct(market.probability)} />
+        <View>
+          <AnimatedNumber
+            value={market.probability * 100}
+            format={(v) => `${Math.round(v)}%`}
+            style={[styles.statValue, { color: colors.text }]}
+          />
+          <Text style={styles.statLabel}>{market.outcomeLabels[0].toLowerCase()}</Text>
+        </View>
         <Stat label="24h" value={signedPct(market.change24h)} color={up ? colors.up : colors.down} />
         <Stat label="volume" value={compactUsd(market.volume)} />
         <Pressable onPress={() => setShowScore(true)} hitSlop={8}>
@@ -147,7 +165,7 @@ export default function MarketDetailScreen() {
         </Text>
       </View>
 
-      <Pressable style={[styles.saveBtn, saved && styles.saveBtnActive]} onPress={() => toggle(market)}>
+      <Pressable style={[styles.saveBtn, saved && styles.saveBtnActive]} onPress={onToggleSave}>
         <Text style={[styles.saveText, saved && { color: colors.bg }]}>
           {saved ? '★ Saved to watchlist' : '☆ Save to watchlist'}
         </Text>
@@ -176,7 +194,9 @@ export default function MarketDetailScreen() {
           </Text>
         </Pressable>
       ) : (
-        <Analysis analysis={analysis} />
+        <Enter>
+          <Analysis analysis={analysis} />
+        </Enter>
       )}
 
       <ScoreExplainer market={market} visible={showScore} onClose={() => setShowScore(false)} />

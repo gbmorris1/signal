@@ -1,8 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { PanResponder, Text, View, StyleSheet } from 'react-native';
+import { Animated, Easing, PanResponder, Text, View, StyleSheet } from 'react-native';
 import Svg, { Path, Circle, Line, Defs, LinearGradient, Stop } from 'react-native-svg';
+import * as Haptics from 'expo-haptics';
 import { colors, radius, spacing } from '@/theme';
 import type { MarketSnapshot } from '@/types';
+
+const AnimatedPath = Animated.createAnimatedComponent(Path);
 
 const PAD_X = 8;
 const PAD_TOP = 12;
@@ -64,8 +67,32 @@ export function ProbabilityChart({
       const y = PAD_TOP + (1 - (d.probability - min) / range) * innerH;
       return [x, y] as const;
     });
-    return { pts, min, max, innerW };
+    // Approximate curve length for the draw-in animation.
+    let len = 0;
+    for (let i = 1; i < pts.length; i++) {
+      len += Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]);
+    }
+    return { pts, min, max, innerW, len: len * 1.08 };
   }, [data, width, height]);
+
+  // Draw-in: dash offset sweeps the line left → right; fill fades in after.
+  const dash = useRef(new Animated.Value(0)).current;
+  const fillOpacity = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    if (!geom) return;
+    dash.setValue(geom.len);
+    fillOpacity.setValue(0);
+    Animated.sequence([
+      Animated.timing(dash, {
+        toValue: 0,
+        duration: 900,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: false, // SVG props aren't native-driver animatable
+      }),
+      Animated.timing(fillOpacity, { toValue: 1, duration: 350, useNativeDriver: false }),
+    ]).start();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [geom?.len]);
 
   // The pan responder is created once, so it must read live values through a
   // ref — capturing `geom`/`data` directly would freeze the first (empty)
@@ -89,12 +116,17 @@ export function ProbabilityChart({
     }),
   ).current;
 
+  const lastIdx = useRef<number | null>(null);
   function locate(x: number) {
     const { innerW, count } = live.current;
     if (innerW <= 0 || count < 2) return;
     const t = (x - PAD_X) / innerW;
-    const idx = Math.round(t * (count - 1));
-    setScrub(Math.min(count - 1, Math.max(0, idx)));
+    const idx = Math.min(count - 1, Math.max(0, Math.round(t * (count - 1))));
+    if (idx !== lastIdx.current) {
+      lastIdx.current = idx;
+      void Haptics.selectionAsync(); // subtle tick as the crosshair steps
+    }
+    setScrub(idx);
   }
 
   if (!geom) return <View style={{ width, height }} />;
@@ -121,8 +153,16 @@ export function ProbabilityChart({
             <Stop offset="1" stopColor={stroke} stopOpacity={0} />
           </LinearGradient>
         </Defs>
-        <Path d={area} fill="url(#chartFill)" />
-        <Path d={line} fill="none" stroke={stroke} strokeWidth={2.5} strokeLinecap="round" />
+        <AnimatedPath d={area} fill="url(#chartFill)" opacity={fillOpacity} />
+        <AnimatedPath
+          d={line}
+          fill="none"
+          stroke={stroke}
+          strokeWidth={2.5}
+          strokeLinecap="round"
+          strokeDasharray={`${geom.len} ${geom.len}`}
+          strokeDashoffset={dash}
+        />
         {!active && <Circle cx={endX} cy={endY} r={4} fill={stroke} />}
         {activePt && (
           <>
