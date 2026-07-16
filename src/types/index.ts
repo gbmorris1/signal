@@ -26,12 +26,20 @@ export interface Market {
   aiScore: number | null; // 0..100
   signal: AISignal;
   updatedAt: string;
+  /** Opaque reference for fetching real price history (platform-specific). */
+  historyRef?: string;
 }
 
 export interface MarketSnapshot {
   probability: number;
   volume: number;
   capturedAt: string;
+}
+
+export interface MarketHistory {
+  snapshots: MarketSnapshot[];
+  /** True when the curve is synthesized (no real price feed available). */
+  synthetic: boolean;
 }
 
 export interface AIAnalysis {
@@ -79,5 +87,5 @@ export interface MarketDataSource {
   readonly platform: Platform | 'mock';
   listMarkets(params?: { category?: Category; query?: string }): Promise<Market[]>;
   getMarket(id: string): Promise<Market | null>;
-  getHistory(id: string): Promise<MarketSnapshot[]>;
+  getHistory(id: string): Promise<MarketHistory>;
 }

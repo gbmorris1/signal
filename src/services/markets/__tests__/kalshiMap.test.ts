@@ -52,8 +52,8 @@ describe('mapKalshiMarket', () => {
       title: 'Who will be the next Pope?',
       category: 'World',
       markets: [
-        { ticker: 'POPE-A', status: 'active', yes_sub_title: 'Cardinal A', last_price_dollars: '0.04' },
-        { ticker: 'POPE-B', status: 'active', yes_sub_title: 'Cardinal B', last_price_dollars: '0.12' },
+        { ticker: 'POPE-A', status: 'active', yes_sub_title: 'Cardinal A', last_price_dollars: '0.08', volume_fp: '500' },
+        { ticker: 'POPE-B', status: 'active', yes_sub_title: 'Cardinal B', last_price_dollars: '0.12', volume_fp: '400' },
       ],
     };
     const mapped = mapKalshiEvents([multi]);

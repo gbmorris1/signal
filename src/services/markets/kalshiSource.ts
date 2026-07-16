@@ -1,6 +1,13 @@
-import type { Category, Market, MarketSnapshot, MarketDataSource } from '@/types';
+import type { Category, Market, MarketHistory, MarketDataSource } from '@/types';
 import { mapKalshiEvents, type KalshiRawEvent } from './kalshiMap';
 import { mockHistory } from '@/data/mockMarkets';
+
+interface KalshiCandle {
+  end_period_ts?: number;
+  yes_bid?: { close_dollars?: string };
+  yes_ask?: { close_dollars?: string };
+  volume_fp?: string;
+}
 
 const KALSHI_BASE = 'https://api.elections.kalshi.com/trade-api/v2';
 
@@ -41,7 +48,36 @@ export class KalshiSource implements MarketDataSource {
     return all.find((m) => m.id === id) ?? null;
   }
 
-  async getHistory(id: string): Promise<MarketSnapshot[]> {
-    return mockHistory(id);
+  async getHistory(id: string): Promise<MarketHistory> {
+    // Real history via the candlesticks endpoint (hourly, past week).
+    const market = await this.getMarket(id);
+    if (market?.historyRef?.includes('/')) {
+      try {
+        const [series, ticker] = market.historyRef.split('/');
+        const now = Math.floor(Date.now() / 1000);
+        const weekAgo = now - 7 * 24 * 3600;
+        const url = `${KALSHI_BASE}/series/${series}/markets/${ticker}/candlesticks?start_ts=${weekAgo}&end_ts=${now}&period_interval=60`;
+        const res = await fetch(url);
+        if (res.ok) {
+          const json = (await res.json()) as { candlesticks?: KalshiCandle[] };
+          const points = (json.candlesticks ?? [])
+            .map((c) => {
+              const bid = parseFloat(c.yes_bid?.close_dollars ?? '');
+              const ask = parseFloat(c.yes_ask?.close_dollars ?? '');
+              if (!Number.isFinite(bid) || !Number.isFinite(ask) || !c.end_period_ts) return null;
+              return {
+                probability: Math.min(0.999, Math.max(0.001, (bid + ask) / 2)),
+                volume: parseFloat(c.volume_fp ?? '0') || 0,
+                capturedAt: new Date(c.end_period_ts * 1000).toISOString(),
+              };
+            })
+            .filter((p): p is NonNullable<typeof p> => p !== null);
+          if (points.length >= 2) return { snapshots: points, synthetic: false };
+        }
+      } catch {
+        /* fall through to synthetic */
+      }
+    }
+    return { snapshots: mockHistory(id), synthetic: true };
   }
 }

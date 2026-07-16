@@ -1,4 +1,4 @@
-import type { Market, MarketSnapshot, MarketDataSource } from '@/types';
+import type { Market, MarketHistory, MarketDataSource } from '@/types';
 import { MOCK_MARKETS, mockHistory } from '@/data/mockMarkets';
 
 /** Local, key-free data source. Backs dev runs and tests. */
@@ -19,7 +19,7 @@ export class MockSource implements MarketDataSource {
     return MOCK_MARKETS.find((m) => m.id === id) ?? null;
   }
 
-  async getHistory(id: string): Promise<MarketSnapshot[]> {
-    return mockHistory(id);
+  async getHistory(id: string): Promise<MarketHistory> {
+    return { snapshots: mockHistory(id), synthetic: true };
   }
 }

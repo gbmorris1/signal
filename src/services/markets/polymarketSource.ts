@@ -1,8 +1,9 @@
-import type { Category, Market, MarketSnapshot, MarketDataSource } from '@/types';
-import { mapPolymarketMarket, type PolymarketRaw } from './polymarketMap';
+import type { Category, Market, MarketHistory, MarketDataSource } from '@/types';
+import { mapPolymarketMarket, isLiveProbability, type PolymarketRaw } from './polymarketMap';
 import { MockSource } from './mockSource';
 
 const GAMMA_BASE = 'https://gamma-api.polymarket.com';
+const CLOB_BASE = 'https://clob.polymarket.com';
 
 /**
  * Live Polymarket data via the public Gamma API. Defensive: any network/parse
@@ -23,7 +24,8 @@ export class PolymarketSource implements MarketDataSource {
       const raw = (await res.json()) as PolymarketRaw[];
       markets = raw
         .map(mapPolymarketMarket)
-        .filter((m): m is Market => m !== null);
+        .filter((m): m is Market => m !== null)
+        .filter((m) => isLiveProbability(m.probability));
       if (markets.length === 0) throw new Error('empty');
       this.cache = markets;
     } catch {
@@ -45,10 +47,28 @@ export class PolymarketSource implements MarketDataSource {
     return all.find((m) => m.id === id) ?? this.fallback.getMarket(id);
   }
 
-  async getHistory(id: string): Promise<MarketSnapshot[]> {
-    // Gamma exposes price history via a separate endpoint per token; until we
-    // persist our own snapshots (market_snapshots table), synthesize from the
-    // current probability + 24h change for a representative curve.
+  async getHistory(id: string): Promise<MarketHistory> {
+    // Real price history from the CLOB per-token endpoint.
+    const market = await this.getMarket(id);
+    if (market?.historyRef) {
+      try {
+        const url = `${CLOB_BASE}/prices-history?market=${market.historyRef}&interval=1w&fidelity=180`;
+        const res = await fetch(url);
+        if (res.ok) {
+          const json = (await res.json()) as { history?: Array<{ t: number; p: number }> };
+          const points = (json.history ?? [])
+            .filter((h) => Number.isFinite(h.t) && Number.isFinite(h.p))
+            .map((h) => ({
+              probability: Math.min(0.999, Math.max(0.001, h.p)),
+              volume: market.volume,
+              capturedAt: new Date(h.t * 1000).toISOString(),
+            }));
+          if (points.length >= 2) return { snapshots: points, synthetic: false };
+        }
+      } catch {
+        /* fall through to synthetic */
+      }
+    }
     return this.fallback.getHistory(id);
   }
 }

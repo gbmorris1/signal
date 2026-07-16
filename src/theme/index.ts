@@ -2,26 +2,29 @@
 // No raw hex outside this file.
 
 export const colors = {
-  // surfaces
-  bg: '#0A0B0D',
-  surface: '#121418',
-  surfaceElevated: '#181B20',
-  border: '#23262D',
+  // surfaces — near-black with a cold cast, layered subtly
+  bg: '#0A0B0E',
+  surface: '#121419',
+  surfaceElevated: '#1A1D24',
+  border: '#22252D',
+  borderStrong: '#2E323C',
   // text
-  text: '#F2F4F7',
-  textMuted: '#9AA3AF',
-  textFaint: '#5B626D',
+  text: '#F4F5F7',
+  textMuted: '#9BA1AC',
+  textFaint: '#5D636E',
   // brand / accent
-  accent: '#4F8CFF',
-  accentDim: '#1E2B45',
+  accent: '#4E8DFF',
+  accentDim: '#16233F',
   // semantics
-  up: '#3DDC97',
-  down: '#FF5C6C',
+  up: '#2FD48C',
+  upDim: '#0F2A20',
+  down: '#FF5A6B',
+  downDim: '#331419',
   warn: '#FFB020',
   // signal chips
-  signalOpportunity: '#3DDC97',
-  signalWatch: '#4F8CFF',
-  signalNeutral: '#9AA3AF',
+  signalOpportunity: '#2FD48C',
+  signalWatch: '#4E8DFF',
+  signalNeutral: '#9BA1AC',
   signalCaution: '#FFB020',
 } as const;
 
@@ -37,18 +40,24 @@ export const spacing = {
 export const radius = {
   sm: 8,
   md: 12,
-  lg: 16,
+  lg: 18,
   pill: 999,
 } as const;
 
 export const typography = {
-  // weights kept system-native for premium feel; sizes scale for hierarchy
-  display: { fontSize: 32, fontWeight: '700' as const, letterSpacing: -0.5 },
-  title: { fontSize: 22, fontWeight: '700' as const, letterSpacing: -0.3 },
-  heading: { fontSize: 17, fontWeight: '600' as const },
+  display: { fontSize: 32, fontWeight: '700' as const, letterSpacing: -0.8 },
+  title: { fontSize: 22, fontWeight: '700' as const, letterSpacing: -0.4 },
+  heading: { fontSize: 17, fontWeight: '600' as const, letterSpacing: -0.2 },
   body: { fontSize: 15, fontWeight: '400' as const },
   bodyStrong: { fontSize: 15, fontWeight: '600' as const },
   caption: { fontSize: 13, fontWeight: '400' as const },
+  /** Small-caps section/label treatment. */
+  kicker: {
+    fontSize: 11,
+    fontWeight: '700' as const,
+    letterSpacing: 1.2,
+    textTransform: 'uppercase' as const,
+  },
   mono: { fontSize: 15, fontWeight: '600' as const, fontVariant: ['tabular-nums'] as ['tabular-nums'] },
 } as const;
 

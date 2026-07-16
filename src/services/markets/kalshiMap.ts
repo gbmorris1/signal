@@ -1,5 +1,5 @@
 import type { Market } from '@/types';
-import { mapCategory, deriveSignal, heuristicScore } from './polymarketMap';
+import { mapCategory, deriveSignal, heuristicScore, isLiveProbability } from './polymarketMap';
 
 // Kalshi trade API v2. Single-question markets are nested under events:
 //   GET https://api.elections.kalshi.com/trade-api/v2/events?status=open&with_nested_markets=true
@@ -43,12 +43,18 @@ export function mapKalshiMarket(event: KalshiRawEvent, raw: KalshiRawMarket): Ma
   const ticker = raw.ticker?.trim();
   if (!eventTitle || !ticker) return null;
 
-  // Price preference: last trade, else bid/ask midpoint.
+  // Price preference: live order-book midpoint over last trade. On thin
+  // markets the last trade can be ancient and wildly stale (a 99¢ print on a
+  // long shot); the current bid/ask reflects what the market thinks NOW.
   const last = dollars(raw.last_price_dollars);
   const bid = dollars(raw.yes_bid_dollars);
   const ask = dollars(raw.yes_ask_dollars);
-  const mid = bid != null && ask != null && (bid > 0 || ask > 0) ? (bid + ask) / 2 : null;
-  const probability = last && last > 0 ? last : mid;
+  const hasBook = bid != null && ask != null && bid > 0 && ask < 1;
+  const spread = hasBook ? ask - bid : 1;
+  const mid = hasBook ? (bid + ask) / 2 : null;
+  // Tight book → trust the mid. Wide/empty book → fall back to last trade,
+  // and drop the market entirely if we have neither.
+  const probability = mid != null && spread <= 0.15 ? mid : last && last > 0 ? last : mid;
   if (probability == null || probability <= 0) return null;
 
   const prev = dollars(raw.previous_price_dollars);
@@ -61,26 +67,35 @@ export function mapKalshiMarket(event: KalshiRawEvent, raw: KalshiRawMarket): Ma
   const multi = (event.markets?.length ?? 1) > 1;
   const title = multi && sub ? `${eventTitle} — ${sub}` : eventTitle;
 
+  const clamped = Math.min(0.999, Math.max(0.001, probability));
+  // Series ticker (event ticker before the first '-') + market ticker, for the
+  // candlesticks history endpoint.
+  const series = (event.event_ticker ?? ticker).split('-')[0];
+
   return {
     id: `kalshi:${ticker}`,
     externalId: ticker,
     platform: 'kalshi',
     title,
     category: mapCategory(event.category, eventTitle),
-    probability: Math.min(0.999, Math.max(0.001, probability)),
+    probability: clamped,
     change24h,
     volume,
-    aiScore: heuristicScore(change24h, volume),
+    aiScore: heuristicScore(change24h, volume, clamped),
     signal: deriveSignal(change24h, volume),
     updatedAt: new Date().toISOString(),
+    historyRef: `${series}/${ticker}`,
   };
 }
 
 // Multi-outcome events can carry dozens of long-shot legs (every 1% candidate
 // in an election). Keep the feed signal-dense: per event, keep the top legs by
-// volume and drop sub-2% long shots (binary events are always kept whole).
+// volume, drop sub-2% long shots, and require a minimum of real trading so
+// stale, never-traded listings don't surface (binary events keep the whole
+// market but still face the volume floor).
 const MAX_LEGS_PER_EVENT = 3;
 const MIN_LEG_PROBABILITY = 0.02;
+const MIN_VOLUME = 25; // contracts — filters never-traded stale listings
 
 /** Map a page of events (with nested markets) to curated Signal markets. */
 export function mapKalshiEvents(events: KalshiRawEvent[]): Market[] {
@@ -88,7 +103,8 @@ export function mapKalshiEvents(events: KalshiRawEvent[]): Market[] {
   for (const e of events) {
     const legs = (e.markets ?? [])
       .map((m) => mapKalshiMarket(e, m))
-      .filter((m): m is Market => m !== null);
+      .filter((m): m is Market => m !== null)
+      .filter((m) => m.volume >= MIN_VOLUME && isLiveProbability(m.probability));
     if (legs.length <= 1) {
       out.push(...legs);
       continue;

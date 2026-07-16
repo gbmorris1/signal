@@ -11,6 +11,7 @@ export interface PolymarketRaw {
   liquidity?: string | number;
   outcomes?: string; // JSON string, e.g. '["Yes","No"]'
   outcomePrices?: string; // JSON string, e.g. '["0.43","0.57"]'
+  clobTokenIds?: string; // JSON string of CLOB token ids (YES first)
   oneDayPriceChange?: number;
   active?: boolean;
   closed?: boolean;
@@ -42,6 +43,13 @@ export function mapCategory(input: string | undefined, question: string): Catego
   return 'world';
 }
 
+// Effectively-settled markets (≥96% / ≤4%) carry no intelligence value — the
+// question is decided. Feeds filter to live uncertainty.
+const SETTLED_BAND = 0.96;
+export function isLiveProbability(p: number): boolean {
+  return p < SETTLED_BAND && p > 1 - SETTLED_BAND;
+}
+
 /** Derive an AI signal from movement + liquidity until a real model score exists. */
 export function deriveSignal(change24h: number, volume: number): AISignal {
   const mag = Math.abs(change24h);
@@ -51,11 +59,19 @@ export function deriveSignal(change24h: number, volume: number): AISignal {
   return 'neutral';
 }
 
-/** Heuristic AI score (0..100) until the model pipeline scores markets server-side. */
-export function heuristicScore(change24h: number, volume: number): number {
-  const move = Math.min(1, Math.abs(change24h) / 0.15);
-  const liq = Math.min(1, volume / 10_000_000);
-  return Math.round((0.6 * move + 0.4 * liq) * 100);
+/**
+ * Heuristic AI score (0..100) until the model pipeline scores markets
+ * server-side. Blends three signals so scores actually spread:
+ *  - movement: how sharply the market repriced (dominant)
+ *  - liquidity: log-scaled volume, so $10k vs $10M differ but $8M vs $10M don't
+ *  - uncertainty: markets near 50% are inherently more interesting than
+ *    foregone conclusions at 2% or 98%
+ */
+export function heuristicScore(change24h: number, volume: number, probability = 0.5): number {
+  const move = Math.min(1, Math.abs(change24h) / 0.1);
+  const liq = Math.min(1, Math.log10(volume + 1) / 7); // 10M ≈ 1.0
+  const uncertainty = 1 - Math.abs(probability - 0.5) * 2;
+  return Math.round((0.45 * move + 0.35 * liq + 0.2 * uncertainty) * 100);
 }
 
 /** Pure mapping from a raw Polymarket market to Signal's `Market`. Returns null if unusable. */
@@ -71,6 +87,7 @@ export function mapPolymarketMarket(raw: PolymarketRaw): Market | null {
   const volume = num(raw.volumeNum ?? raw.volume, 0);
   const category = mapCategory(raw.category, question);
   const externalId = String(raw.slug ?? raw.id ?? question);
+  const clobTokens = parseJsonArray(raw.clobTokenIds);
 
   return {
     id: `polymarket:${externalId}`,
@@ -81,8 +98,9 @@ export function mapPolymarketMarket(raw: PolymarketRaw): Market | null {
     probability,
     change24h,
     volume,
-    aiScore: heuristicScore(change24h, volume),
+    aiScore: heuristicScore(change24h, volume, probability),
     signal: deriveSignal(change24h, volume),
     updatedAt: new Date().toISOString(),
+    historyRef: clobTokens[0], // YES token id → CLOB prices-history
   };
 }

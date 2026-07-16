@@ -1,4 +1,4 @@
-import type { Category, Market, MarketSnapshot, MarketDataSource } from '@/types';
+import type { Category, Market, MarketHistory, MarketDataSource } from '@/types';
 
 /**
  * Merges multiple platform sources behind the single MarketDataSource
@@ -28,10 +28,10 @@ export class CombinedSource implements MarketDataSource {
     return null;
   }
 
-  async getHistory(id: string): Promise<MarketSnapshot[]> {
+  async getHistory(id: string): Promise<MarketHistory> {
     const owner = this.sources.find((s) => id.startsWith(`${s.platform}:`));
     if (owner) return owner.getHistory(id);
-    return this.sources[0]?.getHistory(id) ?? [];
+    return this.sources[0]?.getHistory(id) ?? { snapshots: [], synthetic: true };
   }
 
   /**

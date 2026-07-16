@@ -11,7 +11,7 @@ import { useWatchlist } from '@/state/watchlist';
 import { useEntitlement } from '@/state/entitlement';
 import { getAiUsageToday, incrementAiUsage } from '@/state/usage';
 import { pct, signedPct, compactUsd } from '@/lib/format';
-import type { AIAnalysis, Market, MarketSnapshot } from '@/types';
+import type { AIAnalysis, Market, MarketHistory } from '@/types';
 
 export default function MarketDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -28,10 +28,11 @@ export default function MarketDetailScreen() {
     queryKey: ['market', marketId],
     queryFn: () => source.getMarket(marketId),
   });
-  const { data: history = [] } = useQuery<MarketSnapshot[]>({
+  const { data: history } = useQuery<MarketHistory>({
     queryKey: ['history', marketId],
     queryFn: () => source.getHistory(marketId),
   });
+  const snapshots = history?.snapshots ?? [];
   // Cross-platform comparison (live mode only; [] in mock/demo).
   const { data: comparables = [] } = useQuery<Market[]>({
     queryKey: ['comparables', marketId],
@@ -64,7 +65,7 @@ export default function MarketDetailScreen() {
     }
     setLoadingAI(true);
     try {
-      const result = await generateAnalysis(market, history);
+      const result = await generateAnalysis(market, snapshots);
       await incrementAiUsage();
       setAnalysis(result);
     } finally {
@@ -74,7 +75,12 @@ export default function MarketDetailScreen() {
 
   return (
     <ScrollView contentContainerStyle={styles.content}>
-      <Stack.Screen options={{ title: market.platform }} />
+      <Stack.Screen
+        options={{
+          title: market.platform.charAt(0).toUpperCase() + market.platform.slice(1),
+          headerBackTitle: 'Back',
+        }}
+      />
 
       <SignalChip signal={market.signal} />
       <Text style={styles.title}>{market.title}</Text>
@@ -83,12 +89,15 @@ export default function MarketDetailScreen() {
         <Stat label="probability" value={pct(market.probability)} />
         <Stat label="24h" value={signedPct(market.change24h)} color={up ? colors.up : colors.down} />
         <Stat label="volume" value={compactUsd(market.volume)} />
-        <Stat label="AI score" value={String(market.aiScore ?? '—')} color={colors.accent} />
+        <Stat label="signal score" value={String(market.aiScore ?? '—')} color={colors.accent} />
       </View>
 
       <View style={styles.chartCard}>
-        <Text style={styles.cardLabel}>Probability history</Text>
-        <Sparkline data={history} width={width - spacing.lg * 4} up={up} />
+        <View style={styles.chartHeader}>
+          <Text style={styles.cardLabel}>Probability · past week</Text>
+          {history?.synthetic && <Text style={styles.syntheticTag}>SIMULATED PREVIEW</Text>}
+        </View>
+        <Sparkline data={snapshots} width={width - spacing.lg * 4} up={up} />
       </View>
 
       <View style={styles.card}>
@@ -118,6 +127,10 @@ export default function MarketDetailScreen() {
       </Pressable>
 
       <Text style={styles.section}>AI Analysis</Text>
+      <Text style={styles.aiDisclaimer}>
+        Model reasoning from price action and market data — not a live news feed. Not financial
+        advice.
+      </Text>
       {gated ? (
         <View style={styles.gateCard}>
           <Text style={styles.gateTitle}>Daily AI limit reached</Text>
@@ -246,6 +259,14 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
     gap: spacing.sm,
   },
+  chartHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  syntheticTag: {
+    fontSize: 9,
+    fontWeight: '700',
+    letterSpacing: 0.8,
+    color: colors.warn,
+  },
+  aiDisclaimer: { ...typography.caption, color: colors.textFaint, marginTop: -spacing.sm },
   cardLabel: { ...typography.bodyStrong, color: colors.textMuted },
   cardBody: { ...typography.body, color: colors.text, lineHeight: 21 },
   card: {

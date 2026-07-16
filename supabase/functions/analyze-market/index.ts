@@ -54,30 +54,68 @@ function snapshotHash(m: Market): string {
   return `${m.id}:${m.probability.toFixed(3)}:${m.change24h.toFixed(3)}`;
 }
 
-const SYSTEM = `You are a prediction-market analyst. Given a market, its current
-implied probability, 24h change, and volume, produce concise, neutral, non-advisory
-analysis. You are not giving financial advice. Respond with ONLY a JSON object of shape:
+const SYSTEM = `You are a prediction-market analyst writing for a professional
+research terminal. You receive market data only (no live news feed), so reason
+from the price action, base rates, and scheduled events you know about.
+
+Rules:
+- Be specific and concrete. Name the actual mechanisms, dates, and scheduled
+  events relevant to this question (elections, Fed meetings, earnings, court
+  deadlines, seasons). Never write generic filler like "market sentiment shifted".
+- NEVER fabricate a specific news event as if it happened. If you don't know
+  why it moved, say what KINDS of triggers most plausibly explain a move of
+  this size, and note the uncertainty.
+- "catalysts" = concrete upcoming things to watch, with rough timing when known.
+- "why_changed": if the price barely moved, say so plainly instead of inventing
+  a story.
+- ai_probability_estimate: your own independent estimate. Diverge from the
+  market price when you have a reason to; explain that reason in the summary.
+- Neutral, non-advisory. No financial advice.
+
+Respond with ONLY a JSON object of shape:
 {
-  "summary": string,
-  "bull_case": string,
-  "bear_case": string,
+  "summary": string,            // 2-3 sentences: what this market is + your read
+  "bull_case": string,          // strongest concrete case for YES
+  "bear_case": string,          // strongest concrete case for NO
   "why_changed": string,
   "catalysts": string[],
   "risk_factors": string[],
   "confidence": "low" | "medium" | "high",
-  "ai_probability_estimate": number  // your own 0..1 estimate
+  "ai_probability_estimate": number  // 0..1
 }
 No prose outside the JSON.`;
 
-function userPrompt(m: Market): string {
+interface Snapshot {
+  probability: number;
+  capturedAt?: string;
+}
+
+function trendLine(history: Snapshot[] | undefined): string {
+  if (!history || history.length < 2) return 'No price history available.';
+  const pts = history
+    .filter((h) => Number.isFinite(h.probability))
+    .map((h) => Math.round(h.probability * 100));
+  if (pts.length < 2) return 'No price history available.';
+  const min = Math.min(...pts);
+  const max = Math.max(...pts);
+  // Sample up to 12 points across the window for a compact sparkline.
+  const step = Math.max(1, Math.floor(pts.length / 12));
+  const sampled = pts.filter((_, i) => i % step === 0);
+  return `Past-week trajectory (%, oldest→newest): ${sampled.join(' → ')} (range ${min}–${max}%)`;
+}
+
+function userPrompt(m: Market, history?: Snapshot[]): string {
   return [
     `Market: "${m.title}"`,
+    `Platform: ${m.id.split(':')[0]}`,
     `Category: ${m.category}`,
     `Current implied probability (YES): ${(m.probability * 100).toFixed(1)}%`,
     `24h change: ${(m.change24h * 100).toFixed(1)} points`,
     `Volume: $${Math.round(m.volume).toLocaleString()}`,
+    trendLine(history),
+    `Today's date: ${new Date().toISOString().slice(0, 10)}`,
     ``,
-    `Analyze why the market may have moved and lay out the bull/bear cases.`,
+    `Analyze this market: why it's priced here, why it may have moved, and the bull/bear cases.`,
   ].join('\n');
 }
 
@@ -89,7 +127,7 @@ function jsonResponse(body: unknown, status = 200): Response {
 }
 
 /** Call the configured provider and return the raw model text. */
-async function callModel(market: Market): Promise<string> {
+async function callModel(market: Market, history?: Snapshot[]): Promise<string> {
   if (PROVIDER === 'openrouter') {
     let lastErr = 'no models tried';
     // Try each candidate model; fall through on rate-limit (429).
@@ -108,7 +146,7 @@ async function callModel(market: Market): Promise<string> {
           temperature: 0.4,
           messages: [
             { role: 'system', content: SYSTEM },
-            { role: 'user', content: userPrompt(market) },
+            { role: 'user', content: userPrompt(market, history) },
           ],
         }),
       });
@@ -137,7 +175,7 @@ async function callModel(market: Market): Promise<string> {
       model: ANTHROPIC_MODEL,
       max_tokens: 1024,
       system: SYSTEM,
-      messages: [{ role: 'user', content: userPrompt(market) }],
+      messages: [{ role: 'user', content: userPrompt(market, history) }],
     }),
   });
   if (!res.ok) throw new Error(`anthropic ${res.status}: ${await res.text()}`);
@@ -152,9 +190,11 @@ Deno.serve(async (req: Request) => {
   }
 
   let market: Market;
+  let history: Snapshot[] | undefined;
   try {
     const body = await req.json();
     market = body.market;
+    history = Array.isArray(body.history) ? body.history : undefined;
     if (!market?.id || !market?.title) throw new Error('missing market');
   } catch {
     return jsonResponse({ error: 'invalid body' }, 400);
@@ -187,7 +227,7 @@ Deno.serve(async (req: Request) => {
   // 2) Call the model.
   let text: string;
   try {
-    text = await callModel(market);
+    text = await callModel(market, history);
   } catch (e) {
     return jsonResponse({ error: String(e) }, 502);
   }
