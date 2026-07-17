@@ -10,7 +10,7 @@ const SAMPLE = {
   title: 'Will the Fed cut rates in September?',
   market: 0.43,
   oddiq: 0.5,
-  edge: 'The market’s 43% looks low — cooling inflation and a softer labor market lean the Fed toward a cut, and futures have repriced faster than this market. Fair value is closer to 50%.',
+  edge: 'The 43% looks low — cooling inflation and a softer labor market lean the Fed toward a cut. Fair value is closer to 50%.',
 };
 
 export function ExampleEdge() {
@@ -59,8 +59,8 @@ const styles = StyleSheet.create({
     borderColor: colors.accent,
     borderWidth: 1,
     borderRadius: radius.lg,
-    padding: spacing.lg,
-    gap: spacing.sm,
+    padding: spacing.md,
+    gap: spacing.xs,
   },
   head: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   kicker: { ...typography.kicker, color: colors.accent, fontSize: 10 },

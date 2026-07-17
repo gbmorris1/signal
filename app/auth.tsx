@@ -3,7 +3,6 @@ import {
   KeyboardAvoidingView,
   Platform,
   Pressable,
-  ScrollView,
   Text,
   TextInput,
   View,
@@ -17,12 +16,6 @@ import { BrandMark } from '@/components/BrandMark';
 import { ExampleEdge } from '@/components/ExampleEdge';
 import { track } from '@/lib/analytics';
 import { useAuth, hasSupabase } from '@/state/auth';
-
-const VALUE_PROPS: { icon: keyof typeof Ionicons.glyphMap; text: string }[] = [
-  { icon: 'pulse', text: 'Live odds from Polymarket and Kalshi' },
-  { icon: 'sparkles', text: 'AI analysis of why markets move' },
-  { icon: 'notifications', text: 'Alerts when your markets shift' },
-];
 
 const TAGLINE = 'The AI research terminal for prediction markets';
 
@@ -106,33 +99,19 @@ export default function AuthScreen() {
     <SafeAreaView style={styles.safe}>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        style={{ flex: 1 }}
+        style={styles.container}
       >
-        <ScrollView
-          contentContainerStyle={styles.container}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
-        >
-          <View style={styles.brand}>
-            <View style={styles.mark}>
-              <BrandMark size={44} />
-            </View>
-            <Text style={styles.logo}>ODDIQ</Text>
-            <Text style={styles.tagline}>{TAGLINE}</Text>
+        <View style={styles.brand}>
+          <View style={styles.mark}>
+            <BrandMark size={38} />
           </View>
+          <Text style={styles.logo}>ODDIQ</Text>
+          <Text style={styles.tagline}>{TAGLINE}</Text>
+        </View>
 
-          <View style={styles.props}>
-            {VALUE_PROPS.map((p) => (
-              <View key={p.icon} style={styles.propRow}>
-                <Ionicons name={p.icon} size={15} color={colors.accent} />
-                <Text style={styles.propText}>{p.text}</Text>
-              </View>
-            ))}
-          </View>
+        <ExampleEdge />
 
-          <ExampleEdge />
-
-          <View style={styles.form}>
+        <View style={styles.form}>
           <View style={styles.segment}>
             <Pressable
               onPress={() => setMode('signup')}
@@ -221,8 +200,7 @@ export default function AuthScreen() {
               Dev mode: accounts are stored locally (no Supabase keys configured).
             </Text>
           )}
-          </View>
-        </ScrollView>
+        </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -230,31 +208,28 @@ export default function AuthScreen() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.bg },
-  container: { flexGrow: 1, padding: spacing.xl, justifyContent: 'center', gap: spacing.lg },
-  brand: { alignItems: 'center', marginBottom: spacing.xl },
+  container: { flex: 1, padding: spacing.xl, justifyContent: 'center', gap: spacing.md },
+  brand: { alignItems: 'center', marginBottom: spacing.xs },
   mark: {
-    width: 64,
-    height: 64,
-    borderRadius: 20,
+    width: 54,
+    height: 54,
+    borderRadius: 17,
     backgroundColor: colors.accentDim,
     borderColor: colors.accent,
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: spacing.lg,
+    marginBottom: spacing.sm,
     ...shadows.glowAccent,
   },
-  logo: { ...typography.display, color: colors.text, fontSize: 38, letterSpacing: 1, textAlign: 'center' },
+  logo: { ...typography.display, color: colors.text, fontSize: 30, letterSpacing: 1, textAlign: 'center' },
   tagline: {
-    ...typography.body,
+    ...typography.caption,
     color: colors.textMuted,
-    marginTop: spacing.sm,
+    marginTop: 2,
     textAlign: 'center',
   },
-  props: { gap: spacing.sm, alignSelf: 'center', marginBottom: spacing.xxl },
-  propRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  propText: { ...typography.caption, color: colors.textMuted },
-  form: { gap: spacing.md },
+  form: { gap: spacing.sm },
   segment: {
     flexDirection: 'row',
     backgroundColor: colors.surface,
