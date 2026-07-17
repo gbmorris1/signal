@@ -1,11 +1,13 @@
 import { Linking, Platform } from 'react-native';
 
-// Legal + store URLs. Host the policy pages before App Store submission and
-// update these — Apple requires reachable Privacy Policy and Terms (EULA) links.
+// Legal + store URLs. The source pages live in /legal (privacy.html, terms.html).
+// Host them anywhere public (GitHub Pages, Netlify, your domain) and set the
+// live URLs here — Apple requires reachable Privacy Policy and Terms links.
+// Placeholders below assume you publish at oddiq.ai; change to your real host.
 export const LEGAL = {
   privacyUrl: 'https://oddiq.ai/privacy',
   termsUrl: 'https://oddiq.ai/terms',
-  supportUrl: 'https://oddiq.ai/support',
+  supportUrl: 'mailto:support@oddiq.ai',
 };
 
 /** Standard auto-renewable subscription disclosure Apple expects near the CTA. */
