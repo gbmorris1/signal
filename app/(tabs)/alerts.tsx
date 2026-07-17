@@ -5,7 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useQuery } from '@tanstack/react-query';
 import { colors, radius, spacing, typography, card } from '@/theme';
-import { fetchAlerts } from '@/services/alerts';
+import { fetchAlerts, markAlertRead } from '@/services/alerts';
 import { Enter } from '@/components/motion';
 import { useAuth } from '@/state/auth';
 import type { Alert } from '@/types';
@@ -31,10 +31,19 @@ function dayLabel(iso: string): string {
 export default function AlertsScreen() {
   const { profile } = useAuth();
   const [refreshing, setRefreshing] = useState(false);
-  const { data: alerts = [], isLoading, refetch } = useQuery<Alert[]>({
+  const [readIds, setReadIds] = useState<Set<string>>(new Set());
+  const { data: rawAlerts = [], isLoading, refetch } = useQuery<Alert[]>({
     queryKey: ['alerts', profile?.id ?? 'demo'],
     queryFn: () => fetchAlerts(profile?.id ?? null),
   });
+
+  // Overlay locally-marked-read state so a tap reflects instantly without
+  // waiting on a refetch.
+  const alerts = useMemo(
+    () => rawAlerts.map((a) => (readIds.has(a.id) ? { ...a, read: true } : a)),
+    [rawAlerts, readIds],
+  );
+  const unreadCount = alerts.filter((a) => !a.read).length;
 
   const onRefresh = useCallback(async () => {
     void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -42,6 +51,22 @@ export default function AlertsScreen() {
     await refetch();
     setRefreshing(false);
   }, [refetch]);
+
+  function markRead(alert: Alert) {
+    if (alert.read) return;
+    setReadIds((prev) => new Set(prev).add(alert.id));
+    if (profile) void markAlertRead(profile.id, alert.id);
+  }
+
+  function markAllRead() {
+    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setReadIds((prev) => {
+      const next = new Set(prev);
+      for (const a of alerts) next.add(a.id);
+      return next;
+    });
+    if (profile) for (const a of alerts) if (!a.read) void markAlertRead(profile.id, a.id);
+  }
 
   // Group chronologically by day.
   const sections = useMemo(() => {
@@ -62,12 +87,24 @@ export default function AlertsScreen() {
       refreshControl={
         <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.accent} />
       }
+      ListHeaderComponent={
+        unreadCount > 0 ? (
+          <Pressable
+            style={styles.markAllRow}
+            onPress={markAllRead}
+            accessibilityRole="button"
+            accessibilityLabel="Mark all alerts read"
+          >
+            <Text style={styles.markAllText}>Mark all read</Text>
+          </Pressable>
+        ) : null
+      }
       renderSectionHeader={({ section }) => (
         <Text style={styles.dayLabel}>{section.title}</Text>
       )}
       renderItem={({ item, index }) => (
         <Enter index={Math.min(index, 5)}>
-          <AlertRow alert={item} />
+          <AlertRow alert={item} onPress={() => markRead(item)} />
         </Enter>
       )}
       SectionSeparatorComponent={() => <View style={{ height: spacing.sm }} />}
@@ -88,16 +125,19 @@ export default function AlertsScreen() {
   );
 }
 
-function AlertRow({ alert }: { alert: Alert }) {
+function AlertRow({ alert, onPress }: { alert: Alert; onPress: () => void }) {
   const premium = alert.kind === 'ai_shift';
   return (
     <Pressable
       style={({ pressed }) => [
         styles.card,
-        premium && { borderColor: colors.accent },
+        premium && { borderLeftWidth: 3, borderLeftColor: colors.accent, borderColor: colors.accent },
         pressed && { backgroundColor: colors.surfaceElevated },
       ]}
-      onPress={() => router.push(`/market/${encodeURIComponent(alert.marketId)}`)}
+      onPress={() => {
+        onPress();
+        router.push(`/market/${encodeURIComponent(alert.marketId)}`);
+      }}
     >
       <View style={styles.rowTop}>
         <View style={styles.badgeRow}>
@@ -117,6 +157,8 @@ function AlertRow({ alert }: { alert: Alert }) {
 
 const styles = StyleSheet.create({
   content: { padding: spacing.lg, paddingBottom: spacing.xxl, flexGrow: 1 },
+  markAllRow: { alignSelf: 'flex-end', paddingVertical: spacing.xs, marginBottom: spacing.xs },
+  markAllText: { fontSize: 12, fontWeight: '700', color: colors.accent },
   dayLabel: { ...typography.kicker, color: colors.textFaint, marginBottom: spacing.sm, marginTop: spacing.sm },
   card: {
     ...card,
