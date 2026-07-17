@@ -65,7 +65,7 @@ export function mapKalshiMarket(event: KalshiRawEvent, raw: KalshiRawMarket): Ma
   // markets; qualify the title with the outcome so each row reads standalone.
   const sub = raw.yes_sub_title?.trim();
   const multi = (event.markets?.length ?? 1) > 1;
-  const title = multi && sub ? `${eventTitle} — ${sub}` : eventTitle;
+  const title = multi && sub ? `${eventTitle} · ${sub}` : eventTitle;
 
   const clamped = Math.min(0.999, Math.max(0.001, probability));
   // Series ticker (event ticker before the first '-') + market ticker, for the

@@ -71,7 +71,7 @@ export default function HomeScreen() {
           <View style={styles.header}>
             {demo && (
               <Pressable style={styles.demoBanner} onPress={() => router.push('/auth')}>
-                <Text style={styles.demoText}>Demo mode — tap to create your account →</Text>
+                <Text style={styles.demoText}>Demo mode. Tap to create your account →</Text>
               </Pressable>
             )}
             <Text style={styles.kicker}>{dateKicker()}</Text>
@@ -168,7 +168,7 @@ function HowItWorks({
             Signal scans every live market on Polymarket and Kalshi, then ranks them for you by
             blending four factors:
           </Text>
-          <Row icon="trending-up" title="Movement" body="Markets that repriced sharply in the last 24h — that's where new information is landing." />
+          <Row icon="trending-up" title="Movement" body="Markets that repriced sharply in the last 24h. That's where new information is landing." />
           <Row icon="water" title="Liquidity" body="Real trading volume. Thin markets produce noisy, unreliable prices." />
           <Row icon="help-circle" title="Uncertainty" body="Contested odds near 50% are open questions; markets at 96%+ are already decided and get filtered out." />
           <Row
@@ -177,7 +177,7 @@ function HowItWorks({
             body={
               hasInterests
                 ? 'Markets in categories you picked get boosted. Each card shows why it surfaced.'
-                : 'Pick interests in onboarding to personalize this feed — right now you see the global ranking.'
+                : 'Pick interests in onboarding to personalize this feed. Right now you see the global ranking.'
             }
           />
           <Text style={styles.sheetFoot}>

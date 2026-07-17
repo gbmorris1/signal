@@ -65,7 +65,7 @@ export function MarketCard({ market, reason }: { market: Market; reason?: string
           </View>
           <View style={styles.statBlock}>
             <Stat label="Vol" value={compactUsd(market.volume)} />
-            <Stat label="Score" value={market.aiScore != null ? String(market.aiScore) : '—'} />
+            <Stat label="Score" value={market.aiScore != null ? String(market.aiScore) : '–'} />
           </View>
         </View>
       </Pressable>

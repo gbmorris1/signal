@@ -2,11 +2,17 @@ import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, Text, View, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
-import { colors, radius, spacing, typography, buttonPrimary } from '@/theme';
+import { Ionicons } from '@expo/vector-icons';
+import { colors, radius, spacing, typography, buttonPrimary, card, shadows } from '@/theme';
 import { PLANS, FEATURE_DETAILS } from '@/data/subscriptions';
 import { useEntitlement } from '@/state/entitlement';
 import { track } from '@/lib/analytics';
 import type { PlanTier } from '@/types';
+
+const PLAN_TAGLINE: Record<string, string> = {
+  pro: 'For daily market watchers',
+  trader: 'For serious researchers',
+};
 
 export default function PaywallScreen() {
   const { tier, purchase, restore } = useEntitlement();
@@ -32,7 +38,7 @@ export default function PaywallScreen() {
       track('purchase_complete', { plan: t });
       router.back();
     } catch (e) {
-      // User cancelled or store/offering not configured — stay on the paywall.
+      // User cancelled or store/offering not configured. Stay on the paywall.
       setError(e instanceof Error ? e.message : 'Purchase did not complete.');
     } finally {
       setBusy(null);
@@ -42,11 +48,19 @@ export default function PaywallScreen() {
   return (
     <SafeAreaView style={styles.safe}>
       <ScrollView contentContainerStyle={styles.content}>
-        <Text style={styles.kicker}>Signal</Text>
-        <Text style={styles.title}>Go deeper on every market</Text>
-        <Text style={styles.sub}>
-          Unlock AI reports, personalized signals, and alerts. Cancel anytime.
-        </Text>
+        <Pressable style={styles.closeX} hitSlop={12} onPress={() => router.back()}>
+          <Ionicons name="close" size={20} color={colors.textFaint} />
+        </Pressable>
+
+        <View style={styles.hero}>
+          <View style={styles.mark}>
+            <Ionicons name="sparkles" size={26} color={colors.accent} />
+          </View>
+          <Text style={styles.title}>Go deeper on every market</Text>
+          <Text style={styles.sub}>
+            Full AI reports, a feed built around you, and alerts the moment your markets move.
+          </Text>
+        </View>
 
         {PLANS.filter((p) => p.tier !== 'free').map((p) => {
           const isCurrent = tier === p.tier;
@@ -61,27 +75,46 @@ export default function PaywallScreen() {
                 setExpanded(isExpanded ? null : p.tier);
               }}
             >
-              <View style={styles.planHead}>
-                <Text style={styles.planName}>{p.name}</Text>
-                <Text style={styles.planPrice}>{p.priceLabel}</Text>
-              </View>
-              {p.features.map((f) => (
-                <View key={f} style={styles.featureBlock}>
-                  <Text style={styles.feature}>✓ {f}</Text>
-                  {isExpanded && FEATURE_DETAILS[f] && (
-                    <Text style={styles.featureDetail}>{FEATURE_DETAILS[f]}</Text>
-                  )}
+              {isHighlight && (
+                <View style={styles.popularBadge}>
+                  <Text style={styles.popularText}>MOST POPULAR</Text>
                 </View>
-              ))}
+              )}
+              <View style={styles.planHead}>
+                <View>
+                  <Text style={styles.planName}>{p.name}</Text>
+                  <Text style={styles.planTagline}>{PLAN_TAGLINE[p.tier] ?? ''}</Text>
+                </View>
+                <View style={styles.priceBlock}>
+                  <Text style={styles.planPrice}>{p.priceLabel.replace('/mo', '')}</Text>
+                  <Text style={styles.perMonth}>per month</Text>
+                </View>
+              </View>
+
+              <View style={styles.featureList}>
+                {p.features.map((f) => (
+                  <View key={f} style={styles.featureBlock}>
+                    <View style={styles.featureRow}>
+                      <Ionicons name="checkmark-circle" size={15} color={colors.up} />
+                      <Text style={styles.feature}>{f}</Text>
+                    </View>
+                    {isExpanded && FEATURE_DETAILS[f] && (
+                      <Text style={styles.featureDetail}>{FEATURE_DETAILS[f]}</Text>
+                    )}
+                  </View>
+                ))}
+              </View>
+
               <Text style={styles.expandHint}>
-                {isExpanded ? 'Tap to collapse' : 'Tap to see what each feature includes'}
+                {isExpanded ? 'Hide details' : 'See what each feature includes'}
               </Text>
+
               <Pressable
                 style={[styles.buy, isCurrent && styles.buyOwned]}
                 disabled={isCurrent || busy !== null}
                 onPress={() => buy(p.tier as Exclude<PlanTier, 'free'>)}
               >
-                <Text style={styles.buyText}>
+                <Text style={[styles.buyText, isCurrent && { color: colors.textMuted }]}>
                   {isCurrent
                     ? 'Current plan'
                     : busy === p.tier
@@ -100,12 +133,15 @@ export default function PaywallScreen() {
 
         {error && <Text style={styles.error}>{error}</Text>}
 
-        <Pressable style={styles.restore} onPress={() => void restore()}>
-          <Text style={styles.restoreText}>Restore purchases</Text>
-        </Pressable>
-        <Pressable style={styles.restore} onPress={() => router.back()}>
-          <Text style={styles.closeText}>Not now</Text>
-        </Pressable>
+        <View style={styles.footRow}>
+          <Pressable style={styles.foot} onPress={() => void restore()}>
+            <Text style={styles.footText}>Restore purchases</Text>
+          </Pressable>
+          <Text style={styles.footDot}>·</Text>
+          <Pressable style={styles.foot} onPress={() => router.back()}>
+            <Text style={styles.footTextMuted}>Not now</Text>
+          </Pressable>
+        </View>
       </ScrollView>
     </SafeAreaView>
   );
@@ -113,38 +149,70 @@ export default function PaywallScreen() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.bg },
-  content: { padding: spacing.xl, gap: spacing.md },
-  kicker: { ...typography.caption, color: colors.accent, fontWeight: '700', letterSpacing: 1 },
-  title: { ...typography.display, color: colors.text, fontSize: 28 },
-  sub: { ...typography.body, color: colors.textMuted, marginBottom: spacing.md },
-  plan: {
+  content: { padding: spacing.xl, paddingTop: spacing.lg, gap: spacing.lg },
+  closeX: { alignSelf: 'flex-end' },
+  hero: { alignItems: 'center', marginBottom: spacing.sm },
+  mark: {
+    width: 56,
+    height: 56,
+    borderRadius: 18,
+    backgroundColor: colors.accentDim,
+    borderColor: colors.accent,
     borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius.lg,
-    padding: spacing.lg,
-    backgroundColor: colors.surface,
-    gap: 4,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.lg,
+    ...shadows.glowAccent,
   },
-  planHighlight: { borderColor: colors.accent },
-  planHead: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: spacing.xs },
-  planName: { ...typography.heading, color: colors.text },
-  planPrice: { ...typography.mono, color: colors.accent },
-  feature: { ...typography.caption, color: colors.textMuted, lineHeight: 22 },
+  title: { ...typography.title, color: colors.text, fontSize: 26, textAlign: 'center' },
+  sub: {
+    ...typography.body,
+    color: colors.textMuted,
+    textAlign: 'center',
+    marginTop: spacing.sm,
+    lineHeight: 21,
+    paddingHorizontal: spacing.md,
+  },
+  plan: { ...card, gap: spacing.md },
+  planHighlight: { borderColor: colors.accent, ...shadows.glowAccent },
+  popularBadge: {
+    position: 'absolute',
+    top: -10,
+    alignSelf: 'center',
+    left: '50%',
+    marginLeft: -52,
+    backgroundColor: colors.accent,
+    borderRadius: radius.pill,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 3,
+  },
+  popularText: { fontSize: 10, fontWeight: '700', letterSpacing: 0.8, color: colors.bg },
+  planHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
+  planName: { ...typography.title, color: colors.text },
+  planTagline: { ...typography.caption, color: colors.textFaint, marginTop: 2 },
+  priceBlock: { alignItems: 'flex-end' },
+  planPrice: { ...typography.monoLarge, color: colors.text },
+  perMonth: { ...typography.caption, color: colors.textFaint },
+  featureList: { gap: spacing.sm },
   featureBlock: { gap: 2 },
+  featureRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  feature: { ...typography.body, color: colors.textMuted },
   featureDetail: {
     fontSize: 12,
     color: colors.textFaint,
     lineHeight: 17,
-    paddingLeft: spacing.lg,
+    paddingLeft: 23,
     paddingBottom: spacing.xs,
   },
-  expandHint: { fontSize: 11, color: colors.accent, marginTop: spacing.xs },
-  buy: { ...buttonPrimary, marginTop: spacing.md },
-  buyOwned: { backgroundColor: colors.surfaceElevated },
-  buyText: { color: colors.bg, fontWeight: '700' },
-  trialNote: { fontSize: 11, color: colors.textFaint, textAlign: 'center', marginTop: spacing.xs },
+  expandHint: { fontSize: 11, color: colors.accent, fontWeight: '700' },
+  buy: { ...buttonPrimary },
+  buyOwned: { backgroundColor: colors.surfaceElevated, shadowOpacity: 0, borderTopWidth: 0 },
+  buyText: { color: colors.bg, fontWeight: '700', fontSize: 15 },
+  trialNote: { fontSize: 11, color: colors.textFaint, textAlign: 'center' },
   error: { ...typography.caption, color: colors.down, textAlign: 'center' },
-  restore: { alignItems: 'center', paddingVertical: spacing.sm },
-  restoreText: { color: colors.accent, fontWeight: '600' },
-  closeText: { color: colors.textFaint },
+  footRow: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: spacing.sm },
+  foot: { paddingVertical: spacing.sm },
+  footText: { color: colors.accent, fontWeight: '700', fontSize: 13 },
+  footDot: { color: colors.textFaint },
+  footTextMuted: { color: colors.textFaint, fontSize: 13 },
 });

@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
-import { Pressable, ScrollView, Text, View, StyleSheet, useWindowDimensions } from 'react-native';
+import { Linking, Pressable, ScrollView, Text, View, StyleSheet, useWindowDimensions } from 'react-native';
 import { router, useLocalSearchParams, Stack } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import { useQuery } from '@tanstack/react-query';
 import { colors, radius, spacing, typography, card, shadows, buttonPrimary } from '@/theme';
 import { getMarketSource, getCombinedSource } from '@/services/markets';
@@ -16,7 +17,7 @@ import { SignalChip, PlatformBadge } from '@/components/Chip';
 import { useWatchlist } from '@/state/watchlist';
 import { useEntitlement } from '@/state/entitlement';
 import { getAiUsageToday, incrementAiUsage } from '@/state/usage';
-import { pct, signedPct, compactUsd } from '@/lib/format';
+import { pct, signedPct, compactUsd, platformUrl } from '@/lib/format';
 import type { AIAnalysis, Market, MarketHistory } from '@/types';
 
 export default function MarketDetailScreen() {
@@ -137,7 +138,7 @@ export default function MarketDetailScreen() {
         <Pressable onPress={() => setShowScore(true)} hitSlop={8}>
           <Stat
             label="signal score ⓘ"
-            value={String(market.aiScore ?? '—')}
+            value={String(market.aiScore ?? '–')}
             color={colors.accent}
           />
         </Pressable>
@@ -171,7 +172,7 @@ export default function MarketDetailScreen() {
         ) : (
           <View style={styles.exclusiveRow}>
             <Text style={styles.compareEmpty}>
-              Only listed on {market.platform === 'polymarket' ? 'Polymarket' : 'Kalshi'} — no
+              Only listed on {market.platform === 'polymarket' ? 'Polymarket' : 'Kalshi'}, with no
               equivalent market on {market.platform === 'polymarket' ? 'Kalshi' : 'Polymarket'}.
             </Text>
           </View>
@@ -180,6 +181,18 @@ export default function MarketDetailScreen() {
           Most questions trade on a single platform. When both list the same question, the spread
           between their odds is shown.
         </Text>
+        <Pressable
+          style={styles.externalBtn}
+          onPress={() => {
+            track('external_open', { market_id: market.id, platform: market.platform });
+            void Linking.openURL(platformUrl(market));
+          }}
+        >
+          <Text style={styles.externalText}>
+            Open on {market.platform === 'polymarket' ? 'Polymarket' : 'Kalshi'}
+          </Text>
+          <Ionicons name="open-outline" size={14} color={platformColor(market.platform)} />
+        </Pressable>
       </View>
 
       <Pressable style={[styles.saveBtn, saved && styles.saveBtnActive]} onPress={onToggleSave}>
@@ -190,7 +203,7 @@ export default function MarketDetailScreen() {
 
       <Text style={styles.section}>AI Analysis</Text>
       <Text style={styles.aiDisclaimer}>
-        Model reasoning from price action and market data — not a live news feed. Not financial
+        Model reasoning from price action and market data, not a live news feed. Not financial
         advice.
       </Text>
       {gated ? (
@@ -253,7 +266,7 @@ function Analysis({ analysis }: { analysis: AIAnalysis }) {
         <View style={styles.metaRow}>
           <Text style={styles.metaLabel}>AI probability estimate</Text>
           <Text style={styles.metaValue}>
-            {analysis.aiProbabilityEstimate != null ? pct(analysis.aiProbabilityEstimate) : '—'}
+            {analysis.aiProbabilityEstimate != null ? pct(analysis.aiProbabilityEstimate) : '–'}
           </Text>
         </View>
         <View style={styles.metaRow}>
@@ -263,6 +276,10 @@ function Analysis({ analysis }: { analysis: AIAnalysis }) {
       </View>
     </View>
   );
+}
+
+function platformColor(p: 'polymarket' | 'kalshi'): string {
+  return p === 'polymarket' ? colors.polymarket : colors.kalshi;
 }
 
 function CompareRow({
@@ -352,6 +369,18 @@ const styles = StyleSheet.create({
   badgeRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   exclusiveRow: { paddingVertical: spacing.xs },
   compareFoot: { fontSize: 11, color: colors.textFaint, lineHeight: 16, marginTop: spacing.xs },
+  externalBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    borderWidth: 1,
+    borderColor: colors.borderStrong,
+    borderRadius: radius.md,
+    paddingVertical: spacing.md,
+    marginTop: spacing.sm,
+  },
+  externalText: { fontSize: 13, fontWeight: '700', color: colors.text },
   aiDisclaimer: { ...typography.caption, color: colors.textFaint, marginTop: -spacing.sm },
   cardLabel: { ...typography.bodyStrong, color: colors.textMuted },
   cardBody: { ...typography.body, color: colors.text, lineHeight: 21 },

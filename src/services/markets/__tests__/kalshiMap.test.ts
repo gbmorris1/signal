@@ -58,7 +58,7 @@ describe('mapKalshiMarket', () => {
     };
     const mapped = mapKalshiEvents([multi]);
     expect(mapped).toHaveLength(2);
-    expect(mapped[0].title).toBe('Who will be the next Pope? — Cardinal A');
+    expect(mapped[0].title).toBe('Who will be the next Pope? · Cardinal A');
   });
 });
 

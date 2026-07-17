@@ -16,6 +16,20 @@ export function compactUsd(n: number): string {
 }
 
 export function scoreLabel(score: number | null): string {
-  if (score == null) return '—';
+  if (score == null) return '–';
   return String(Math.round(score));
+}
+
+/** Public web URL for a market on its home platform. */
+export function platformUrl(market: {
+  platform: 'polymarket' | 'kalshi';
+  externalId: string;
+  historyRef?: string;
+}): string {
+  if (market.platform === 'polymarket') {
+    return `https://polymarket.com/market/${market.externalId}`;
+  }
+  // Kalshi: link to the series page (stable public URL).
+  const series = market.historyRef?.split('/')[0] ?? market.externalId.split('-')[0];
+  return `https://kalshi.com/markets/${series.toLowerCase()}`;
 }

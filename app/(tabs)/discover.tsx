@@ -101,7 +101,7 @@ export default function DiscoverScreen() {
             )}
           </View>
 
-          {!searching && rail.length > 0 && (
+          {!searching && section === 'trending' && rail.length > 0 && (
             <View>
               <Text style={styles.railLabel}>ON THE MOVE</Text>
               <ScrollView
@@ -140,7 +140,8 @@ export default function DiscoverScreen() {
                 tint={c !== 'all' ? categoryColors[c] : undefined}
                 onPress={() => {
                   void Haptics.selectionAsync();
-                  setCategory(c);
+                  // Tapping the active category clears it back to All.
+                  setCategory(category === c ? 'all' : c);
                 }}
               />
             ))}
@@ -171,7 +172,7 @@ export default function DiscoverScreen() {
             <Text style={styles.emptyBody}>
               {searching
                 ? `No markets match “${query}”. Try a broader term like “Fed” or “Bitcoin”.`
-                : 'No markets in this category right now — check back after the next sync.'}
+                : 'No markets in this category right now. Check back after the next sync.'}
             </Text>
           </View>
         )

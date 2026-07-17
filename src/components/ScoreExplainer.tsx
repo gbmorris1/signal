@@ -12,7 +12,7 @@ const ROWS: Array<{
     key: 'movement',
     label: 'Movement',
     desc: (m) =>
-      `Repriced ${Math.abs(Math.round(m.change24h * 100))} points in 24h — sharp moves mean new information is arriving.`,
+      `Repriced ${Math.abs(Math.round(m.change24h * 100))} points in 24h. Sharp moves mean new information is arriving.`,
   },
   {
     key: 'liquidity',
@@ -25,7 +25,7 @@ const ROWS: Array<{
     desc: (m) =>
       `At ${Math.round(m.probability * 100)}%, ${
         Math.abs(m.probability - 0.5) < 0.15
-          ? 'this is genuinely contested — the most interesting kind of market.'
+          ? 'this is genuinely contested. The most interesting kind of market.'
           : 'the market leans one way, so there is less open question here.'
       }`,
   },
@@ -47,7 +47,7 @@ export function ScoreExplainer({
       <Pressable style={styles.backdrop} onPress={onClose}>
         <Pressable style={styles.sheet} onPress={() => {}}>
           <View style={styles.scoreRow}>
-            <Text style={styles.bigScore}>{market.aiScore ?? '—'}</Text>
+            <Text style={styles.bigScore}>{market.aiScore ?? '–'}</Text>
             <View style={{ flex: 1 }}>
               <Text style={styles.title}>Signal score</Text>
               <Text style={styles.sub}>
@@ -76,7 +76,7 @@ export function ScoreExplainer({
           })}
 
           <Text style={styles.footnote}>
-            Computed from market data. Not a prediction — the AI's own probability estimate lives in
+            Computed from market data. Not a prediction. The AI's own probability estimate lives in
             the analysis below.
           </Text>
 

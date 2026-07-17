@@ -11,7 +11,8 @@ export type FunnelEvent =
   | 'plan_select'
   | 'purchase_start'
   | 'purchase_complete'
-  | 'trial_start';
+  | 'trial_start'
+  | 'external_open';
 
 let currentUserId: string | null = null;
 

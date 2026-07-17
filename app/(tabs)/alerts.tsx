@@ -78,7 +78,7 @@ export default function AlertsScreen() {
             <Ionicons name="notifications-off-outline" size={28} color={colors.textFaint} />
             <Text style={styles.emptyTitle}>No alerts yet</Text>
             <Text style={styles.emptyBody}>
-              Save markets to your watchlist — when one moves sharply, the alert lands here and on
+              Save markets to your watchlist. When one moves sharply, the alert lands here and on
               your lock screen.
             </Text>
           </View>

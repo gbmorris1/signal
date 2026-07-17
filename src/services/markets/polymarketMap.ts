@@ -32,14 +32,52 @@ function parseJsonArray(s: string | undefined): string[] {
   }
 }
 
-/** Map a Polymarket category/keyword to Signal's fixed category set. */
+// Native platform categories → Signal categories. Checked FIRST — the
+// platform's own taxonomy beats keyword guessing every time.
+const NATIVE_CATEGORY: Record<string, Category> = {
+  // Kalshi
+  politics: 'politics',
+  elections: 'politics',
+  economics: 'finance',
+  financials: 'finance',
+  companies: 'finance',
+  'science and technology': 'technology',
+  sports: 'sports',
+  world: 'world',
+  'climate and weather': 'world',
+  entertainment: 'world',
+  social: 'world',
+  health: 'world',
+  transportation: 'world',
+  // Polymarket (when present)
+  'us-current-affairs': 'politics',
+  crypto: 'crypto',
+  business: 'finance',
+  science: 'technology',
+  'pop-culture': 'world',
+};
+
+/**
+ * Map a platform category/keywords to Signal's fixed category set.
+ * Word-boundary matching only. Substring matching put "whether" in crypto
+ * (eth) and "rain" in technology (ai) — never again.
+ */
 export function mapCategory(input: string | undefined, question: string): Category {
-  const hay = `${input ?? ''} ${question}`.toLowerCase();
-  if (/(fed|rate|inflation|cpi|gdp|recession|stock|s&p|earnings|economy)/.test(hay)) return 'finance';
-  if (/(bitcoin|btc|eth|crypto|solana|token|blockchain)/.test(hay)) return 'crypto';
-  if (/(election|president|senate|congress|trump|biden|poll|vote|policy)/.test(hay)) return 'politics';
-  if (/(nba|nfl|mlb|soccer|premier|ufc|olympic|super bowl|world cup|match)/.test(hay)) return 'sports';
-  if (/(ai|openai|gpt|chip|tech|software|apple|google|spacex)/.test(hay)) return 'technology';
+  const native = input?.trim().toLowerCase();
+  if (native && NATIVE_CATEGORY[native]) return NATIVE_CATEGORY[native];
+
+  const hay = question.toLowerCase();
+  const has = (re: RegExp) => re.test(hay);
+  if (has(/\b(bitcoin|btc|eth|ethereum|crypto|solana|blockchain|memecoin|stablecoin|xrp|dogecoin)\b/))
+    return 'crypto';
+  if (has(/\b(fed|rates?|inflation|cpi|gdp|recession|stocks?|s&p|nasdaq|earnings|economy|tariffs?|treasury)\b/))
+    return 'finance';
+  if (has(/\b(election|president|presidential|senate|congress|trump|biden|governor|polls?|votes?|impeach|primary|nominee|parliament|minister)\b/))
+    return 'politics';
+  if (has(/\b(nba|nfl|mlb|nhl|soccer|premier league|ufc|olympics?|super bowl|world cup|f1|grand prix|playoffs?|finals?|champions league|tennis|golf)\b/))
+    return 'sports';
+  if (has(/\b(openai|chatgpt|gpt|anthropic|artificial intelligence|chips?|semiconductor|software|iphone|apple|google|microsoft|tesla|spacex|nasa|rocket|satellite)\b/))
+    return 'technology';
   return 'world';
 }
 
