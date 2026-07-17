@@ -443,11 +443,13 @@ Deno.serve(async (req: Request) => {
   try {
     text = await callModel(market, history, sources, depth);
   } catch (e) {
+    console.error('analyze-market: model call failed:', String(e));
     return jsonResponse({ error: String(e) }, 502);
   }
 
   const parsed = extractJson(text);
   if (!parsed || !parsed.summary) {
+    console.error('analyze-market: model returned non-JSON:', text.slice(0, 400));
     return jsonResponse({ error: 'model returned non-JSON', raw: text.slice(0, 400) }, 502);
   }
 

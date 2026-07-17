@@ -100,7 +100,8 @@ export async function generateAnalysis(
         sources: parsed.sources.map((s) => ({ title: s.title, url: s.url, date: s.date ?? null })),
         createdAt: new Date().toISOString(),
       };
-    } catch {
+    } catch (e) {
+      if (__DEV__) console.warn('analyze-market call failed, using fallback:', e);
       result = fallbackAnalysis(market);
     }
   }
