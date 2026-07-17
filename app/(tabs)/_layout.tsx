@@ -1,5 +1,6 @@
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import * as Haptics from 'expo-haptics';
 import { colors } from '@/theme';
 
 const ICONS: Record<string, { on: keyof typeof Ionicons.glyphMap; off: keyof typeof Ionicons.glyphMap }> = {
@@ -13,6 +14,9 @@ const ICONS: Record<string, { on: keyof typeof Ionicons.glyphMap; off: keyof typ
 export default function TabsLayout() {
   return (
     <Tabs
+      screenListeners={{
+        tabPress: () => void Haptics.selectionAsync(),
+      }}
       screenOptions={({ route }) => ({
         headerStyle: { backgroundColor: colors.bg },
         headerTintColor: colors.text,

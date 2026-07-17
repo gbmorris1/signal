@@ -1,5 +1,6 @@
-import { useMemo, useState } from 'react';
-import { FlatList, Modal, Pressable, Text, View, StyleSheet } from 'react-native';
+import { useCallback, useMemo, useState } from 'react';
+import { FlatList, Modal, Pressable, RefreshControl, Text, View, StyleSheet } from 'react-native';
+import * as Haptics from 'expo-haptics';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -30,10 +31,18 @@ export default function HomeScreen() {
   const source = useMemo(() => getMarketSource(), []);
   const { profile, demo } = useAuth();
   const [showHow, setShowHow] = useState(false);
-  const { data = [], isLoading } = useQuery<Market[]>({
+  const [refreshing, setRefreshing] = useState(false);
+  const { data = [], isLoading, refetch } = useQuery<Market[]>({
     queryKey: ['markets', 'briefing'],
     queryFn: () => source.listMarkets(),
   });
+
+  const onRefresh = useCallback(async () => {
+    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setRefreshing(true);
+    await refetch();
+    setRefreshing(false);
+  }, [refetch]);
 
   const interests = profile?.interests ?? [];
   const experience = profile?.experience ?? 'active';
@@ -55,6 +64,9 @@ export default function HomeScreen() {
         data={briefing}
         keyExtractor={(r) => r.market.id}
         contentContainerStyle={styles.content}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.accent} />
+        }
         ListHeaderComponent={
           <View style={styles.header}>
             {demo && (

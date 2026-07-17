@@ -1,7 +1,7 @@
 import { useRef } from 'react';
 import { Animated, Pressable, Text, View, StyleSheet } from 'react-native';
 import { router } from 'expo-router';
-import { colors, radius, spacing, typography } from '@/theme';
+import { colors, categoryColors, radius, spacing, typography } from '@/theme';
 import { pct, signedPct, compactUsd } from '@/lib/format';
 import { SignalChip, PlatformBadge } from './Chip';
 import { OutcomeSplit } from './OutcomeSplit';
@@ -28,7 +28,9 @@ export function MarketCard({ market, reason }: { market: Market; reason?: string
         <View style={styles.topRow}>
           <View style={styles.metaRow}>
             <PlatformBadge platform={market.platform} />
-            <Text style={styles.category}>{market.category.toUpperCase()}</Text>
+            <Text style={[styles.category, { color: categoryColors[market.category] ?? colors.textFaint }]}>
+              {market.category.toUpperCase()}
+            </Text>
           </View>
           <SignalChip signal={market.signal} />
         </View>

@@ -33,6 +33,16 @@ export const colors = {
   kalshiDim: '#0A2622',
 } as const;
 
+/** Per-category accent hues — used for kickers, chips, and section tints. */
+export const categoryColors: Record<string, string> = {
+  politics: '#FF7A59',
+  finance: '#4E8DFF',
+  crypto: '#F7B32B',
+  sports: '#2FD48C',
+  world: '#9B8CFF',
+  technology: '#00C2D1',
+};
+
 export const spacing = {
   xs: 4,
   sm: 8,

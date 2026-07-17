@@ -9,6 +9,7 @@ import { track } from '@/lib/analytics';
 import { ProbabilityChart } from '@/components/ProbabilityChart';
 import { ScoreExplainer } from '@/components/ScoreExplainer';
 import { OutcomeSplit } from '@/components/OutcomeSplit';
+import { ProbabilityGauge } from '@/components/ProbabilityGauge';
 import { AnimatedNumber, Enter } from '@/components/motion';
 import * as Haptics from 'expo-haptics';
 import { SignalChip, PlatformBadge } from '@/components/Chip';
@@ -115,8 +116,11 @@ export default function MarketDetailScreen() {
       </View>
       <Text style={styles.title}>{market.title}</Text>
 
-      <View style={styles.card}>
-        <OutcomeSplit market={market} size="lg" />
+      <View style={[styles.card, styles.headlineCard]}>
+        <ProbabilityGauge probability={market.probability} up={up} />
+        <View style={{ flex: 1 }}>
+          <OutcomeSplit market={market} size="lg" />
+        </View>
       </View>
 
       <View style={styles.statsRow}>
@@ -340,6 +344,7 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
     gap: spacing.sm,
   },
+  headlineCard: { flexDirection: 'row', alignItems: 'center', gap: spacing.lg },
   chartHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   syntheticTag: {
     fontSize: 9,
