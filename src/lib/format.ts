@@ -21,21 +21,20 @@ export function scoreLabel(score: number | null): string {
 }
 
 /**
- * Public web URL for a market on its home platform, routed by region.
- * US users go to the CFTC-regulated US venues (Kalshi is US-regulated;
- * Polymarket's US entity lives at polymarket.us); international users go to
- * the main sites. Pass the device region ('US', 'GB', …) from expo-localization.
+ * Public web URL for the exact market. We link to polymarket.com/market/{slug},
+ * which resolves to the canonical market page. (We do NOT route to polymarket.us:
+ * it's a separate catalog whose slugs don't match the API's, so those links land
+ * on the homepage. Jurisdiction eligibility is handled by the confirm dialog.)
  */
-export function platformUrl(
-  market: { platform: 'polymarket' | 'kalshi'; externalId: string; historyRef?: string },
-  region?: string | null,
-): string {
-  const isUS = (region ?? '').toUpperCase() === 'US';
+export function platformUrl(market: {
+  platform: 'polymarket' | 'kalshi';
+  externalId: string;
+  historyRef?: string;
+}): string {
   if (market.platform === 'polymarket') {
-    const host = isUS ? 'https://polymarket.us' : 'https://polymarket.com';
-    return `${host}/market/${market.externalId}`;
+    return `https://polymarket.com/market/${market.externalId}`;
   }
-  // Kalshi is US-regulated; the same site serves both, linked to the series page.
+  // Kalshi: link to the series page (stable public URL).
   const series = market.historyRef?.split('/')[0] ?? market.externalId.split('-')[0];
   return `https://kalshi.com/markets/${series.toLowerCase()}`;
 }

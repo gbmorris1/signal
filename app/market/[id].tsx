@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
-  Alert as RNAlert,
   Animated,
   Linking,
   Pressable,
@@ -10,9 +9,9 @@ import {
   StyleSheet,
   useWindowDimensions,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router, useLocalSearchParams, Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { getLocales } from 'expo-localization';
 import { useQuery } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
 import { colors, radius, spacing, typography, card, shadows, buttonPrimary } from '@/theme';
@@ -23,6 +22,7 @@ import { ProbabilityChart } from '@/components/ProbabilityChart';
 import { ScoreExplainer } from '@/components/ScoreExplainer';
 import { OutcomeSplit } from '@/components/OutcomeSplit';
 import { ProbabilityGauge } from '@/components/ProbabilityGauge';
+import { ExternalLinkSheet } from '@/components/ExternalLinkSheet';
 import { Enter } from '@/components/motion';
 import { SignalChip, PlatformBadge } from '@/components/Chip';
 import { useWatchlist } from '@/state/watchlist';
@@ -53,6 +53,9 @@ export default function MarketDetailScreen() {
   const [teaser, setTeaser] = useState<string | null>(null);
   const [showScore, setShowScore] = useState(false);
   const [aboutExpanded, setAboutExpanded] = useState(false);
+  const [showExternal, setShowExternal] = useState(false);
+
+  const EXT_SKIP_KEY = 'oddiq.skipExternalWarning.v1';
 
   const { data: market } = useQuery<Market | null>({
     queryKey: ['market', marketId],
@@ -130,27 +133,18 @@ export default function MarketDetailScreen() {
     toggle(market);
   }
 
-  function openOnPlatform() {
+  function leaveToPlatform() {
     if (!market) return;
-    const region = getLocales()[0]?.regionCode ?? null;
-    const url = platformUrl(market, region);
-    const name = market.platform === 'polymarket' ? 'Polymarket' : 'Kalshi';
-    // Interstitial: ODDIQ is research-only; leaving to a third-party trading
-    // venue is an explicit, user-initiated choice.
-    RNAlert.alert(
-      `Leave ODDIQ for ${name}?`,
-      `${name} is a separate third-party trading platform. ODDIQ is research and analysis only and does not place trades. You'll continue on ${name}'s site, subject to their terms and your local eligibility.`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: `Continue to ${name}`,
-          onPress: () => {
-            track('external_open', { market_id: market.id, platform: market.platform, region });
-            void Linking.openURL(url);
-          },
-        },
-      ],
-    );
+    track('external_open', { market_id: market.id, platform: market.platform });
+    void Linking.openURL(platformUrl(market));
+  }
+
+  async function openOnPlatform() {
+    if (!market) return;
+    // Respect a saved "don't show again" choice; otherwise show the sheet.
+    const skip = await AsyncStorage.getItem(EXT_SKIP_KEY);
+    if (skip === '1') leaveToPlatform();
+    else setShowExternal(true);
   }
 
   return (
@@ -327,6 +321,16 @@ export default function MarketDetailScreen() {
       )}
 
       <ScoreExplainer market={market} visible={showScore} onClose={() => setShowScore(false)} />
+      <ExternalLinkSheet
+        platform={market.platform}
+        visible={showExternal}
+        onCancel={() => setShowExternal(false)}
+        onContinue={async (dontAsk) => {
+          if (dontAsk) await AsyncStorage.setItem(EXT_SKIP_KEY, '1');
+          setShowExternal(false);
+          leaveToPlatform();
+        }}
+      />
     </ScrollView>
   );
 }

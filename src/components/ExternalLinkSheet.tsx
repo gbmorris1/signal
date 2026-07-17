@@ -1,0 +1,118 @@
+import { useState } from 'react';
+import { Modal, Pressable, Text, View, StyleSheet } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { colors, radius, spacing, typography, shadows, buttonPrimary } from '@/theme';
+
+const PLATFORM = {
+  polymarket: { name: 'Polymarket', color: colors.polymarket, dim: colors.polymarketDim, glyph: 'P' },
+  kalshi: { name: 'Kalshi', color: colors.kalshi, dim: colors.kalshiDim, glyph: 'K' },
+} as const;
+
+/**
+ * Bottom-sheet confirmation before leaving ODDIQ for a third-party trading
+ * venue. Nicer than a system alert, and offers "don't show again" (the caller
+ * persists the choice).
+ */
+export function ExternalLinkSheet({
+  platform,
+  visible,
+  onCancel,
+  onContinue,
+}: {
+  platform: 'polymarket' | 'kalshi';
+  visible: boolean;
+  onCancel: () => void;
+  onContinue: (dontAskAgain: boolean) => void;
+}) {
+  const [dontAsk, setDontAsk] = useState(false);
+  const p = PLATFORM[platform];
+
+  return (
+    <Modal visible={visible} transparent animationType="slide" onRequestClose={onCancel}>
+      <Pressable style={styles.backdrop} onPress={onCancel}>
+        <Pressable style={styles.sheet} onPress={() => {}}>
+          <View style={[styles.glyph, { backgroundColor: p.dim, borderColor: p.color }]}>
+            <View style={[styles.glyphInner, { backgroundColor: p.color }]}>
+              <Text style={styles.glyphText}>{p.glyph}</Text>
+            </View>
+          </View>
+
+          <Text style={styles.title}>Leave ODDIQ for {p.name}?</Text>
+          <Text style={styles.body}>
+            {p.name} is a separate third-party trading platform. ODDIQ is research and analysis
+            only and never places trades. You'll continue on {p.name}'s site, subject to their
+            terms and your local eligibility.
+          </Text>
+
+          <Pressable style={styles.checkRow} onPress={() => setDontAsk((v) => !v)}>
+            <View style={[styles.checkbox, dontAsk && styles.checkboxOn]}>
+              {dontAsk && <Ionicons name="checkmark" size={13} color={colors.bg} />}
+            </View>
+            <Text style={styles.checkLabel}>Don't show this again</Text>
+          </Pressable>
+
+          <Pressable
+            style={[styles.continueBtn, { backgroundColor: p.color }]}
+            onPress={() => onContinue(dontAsk)}
+          >
+            <Text style={styles.continueText}>Continue to {p.name}</Text>
+            <Ionicons name="open-outline" size={15} color={colors.bg} />
+          </Pressable>
+          <Pressable style={styles.cancelBtn} onPress={onCancel}>
+            <Text style={styles.cancelText}>Cancel</Text>
+          </Pressable>
+        </Pressable>
+      </Pressable>
+    </Modal>
+  );
+}
+
+const styles = StyleSheet.create({
+  backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.72)', justifyContent: 'flex-end' },
+  sheet: {
+    backgroundColor: colors.surface,
+    borderTopLeftRadius: radius.lg,
+    borderTopRightRadius: radius.lg,
+    borderColor: colors.border,
+    borderWidth: 1,
+    padding: spacing.xl,
+    paddingBottom: spacing.xxl,
+    gap: spacing.md,
+    alignItems: 'center',
+  },
+  glyph: {
+    width: 52,
+    height: 52,
+    borderRadius: 16,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...shadows.card,
+  },
+  glyphInner: { width: 30, height: 30, borderRadius: 9, alignItems: 'center', justifyContent: 'center' },
+  glyphText: { color: colors.bg, fontWeight: '800', fontSize: 16 },
+  title: { ...typography.title, color: colors.text, fontSize: 19, textAlign: 'center' },
+  body: { ...typography.caption, color: colors.textMuted, lineHeight: 19, textAlign: 'center' },
+  checkRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, alignSelf: 'flex-start', paddingVertical: spacing.xs },
+  checkbox: {
+    width: 20,
+    height: 20,
+    borderRadius: 6,
+    borderWidth: 1.5,
+    borderColor: colors.borderStrong,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  checkboxOn: { backgroundColor: colors.accent, borderColor: colors.accent },
+  checkLabel: { ...typography.body, color: colors.textMuted, fontSize: 14 },
+  continueBtn: {
+    ...buttonPrimary,
+    flexDirection: 'row',
+    gap: spacing.sm,
+    alignSelf: 'stretch',
+    marginTop: spacing.xs,
+  },
+  continueText: { color: colors.bg, fontWeight: '700', fontSize: 15 },
+  cancelBtn: { alignSelf: 'stretch', alignItems: 'center', paddingVertical: spacing.md },
+  cancelText: { color: colors.textMuted, fontWeight: '600' },
+});

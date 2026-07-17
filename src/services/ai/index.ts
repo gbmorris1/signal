@@ -20,7 +20,7 @@ function fallbackAnalysis(market: Market): AIAnalysis {
   const dir = market.change24h >= 0 ? 'up' : 'down';
   return {
     marketId: market.id,
-    edge: `Sign in to unlock ODDIQ's live, news-backed edge on this market — this preview reads the price action only. The market is trading at ${Math.round(market.probability * 100)}%.`,
+    edge: `ODDIQ couldn't reach the live analysis engine just now, so this is a price-only preview (market at ${Math.round(market.probability * 100)}%). Tap Explain again in a moment for the full news-backed edge.`,
     summary: `"${market.title}" is trading at ${Math.round(market.probability * 100)}% and moved ${dir} over the last 24 hours.`,
     bullCase: 'Momentum and recent flow favor the YES side; watch for confirmation from upcoming catalysts.',
     bearCase: 'The move may be noise; mean-reversion is likely if no new information arrives.',
