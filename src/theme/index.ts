@@ -137,10 +137,9 @@ export const shadows: Record<'card' | 'raised' | 'glowAccent' | 'glowUp' | 'glow
 export const buttonPrimary: ViewStyle = {
   backgroundColor: colors.accent,
   borderRadius: radius.md,
-  paddingVertical: 14,
+  height: 50,
   alignItems: 'center',
-  borderTopWidth: 1,
-  borderTopColor: 'rgba(255,255,255,0.30)',
+  justifyContent: 'center',
   ...({
     shadowColor: '#4E8DFF',
     shadowOpacity: 0.35,
