@@ -27,6 +27,7 @@ import { Enter } from '@/components/motion';
 import { SignalChip, PlatformBadge } from '@/components/Chip';
 import { useWatchlist } from '@/state/watchlist';
 import { useEntitlement } from '@/state/entitlement';
+import { useAuth } from '@/state/auth';
 import { pct, signedPct, compactUsd, platformUrl } from '@/lib/format';
 import type { AIAnalysis, Confidence, Market, MarketHistory } from '@/types';
 
@@ -47,6 +48,7 @@ export default function MarketDetailScreen() {
   const { width } = useWindowDimensions();
   const { has, toggle } = useWatchlist();
   const { entitlements } = useEntitlement();
+  const { demo } = useAuth();
   const [analysis, setAnalysis] = useState<AIAnalysis | null>(null);
   const [loadingAI, setLoadingAI] = useState(false);
   const [gated, setGated] = useState(false);
@@ -100,6 +102,11 @@ export default function MarketDetailScreen() {
 
   async function runAnalysis() {
     if (!market) return;
+    if (demo) {
+      track('demo_ai_blocked', { market_id: market.id });
+      router.push('/auth');
+      return;
+    }
     track('explain_click', { market_id: market.id, tier: entitlements.tier });
     setLoadingAI(true);
     try {
@@ -126,6 +133,11 @@ export default function MarketDetailScreen() {
 
   function onToggleSave() {
     if (!market) return;
+    if (demo) {
+      track('demo_watchlist_blocked', { market_id: market.id });
+      router.push('/auth');
+      return;
+    }
     void Haptics.impactAsync(
       saved ? Haptics.ImpactFeedbackStyle.Light : Haptics.ImpactFeedbackStyle.Medium,
     );
@@ -279,7 +291,17 @@ export default function MarketDetailScreen() {
         <Text style={styles.aiDisclaimer}>Model view from market data. Not financial advice.</Text>
       </View>
 
-      {gated ? (
+      {demo ? (
+        <View style={styles.gateCard}>
+          <Text style={styles.gateTitle}>Create a free account</Text>
+          <Text style={styles.gateBody}>
+            Sign up to run AI analysis and save markets to your watchlist.
+          </Text>
+          <Pressable style={styles.explainBtn} onPress={() => router.push('/auth')}>
+            <Text style={styles.explainText}>Create account</Text>
+          </Pressable>
+        </View>
+      ) : gated ? (
         <View style={styles.gateCard}>
           {teaser && (
             <View style={styles.teaserWrap}>
