@@ -33,6 +33,8 @@ export interface Market {
    * Usually ['Yes','No'], but e.g. ['Norris','Verstappen'] on head-to-heads.
    */
   outcomeLabels: [string, string];
+  /** Plain-language explanation of the market and its resolution rules. */
+  description?: string;
 }
 
 export interface MarketSnapshot {

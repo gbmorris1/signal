@@ -12,6 +12,7 @@ export interface PolymarketRaw {
   outcomes?: string; // JSON string, e.g. '["Yes","No"]'
   outcomePrices?: string; // JSON string, e.g. '["0.43","0.57"]'
   clobTokenIds?: string; // JSON string of CLOB token ids (YES first)
+  description?: string;
   oneDayPriceChange?: number;
   active?: boolean;
   closed?: boolean;
@@ -168,5 +169,6 @@ export function mapPolymarketMarket(raw: PolymarketRaw): Market | null {
     updatedAt: new Date().toISOString(),
     historyRef: clobTokens[0], // YES token id → CLOB prices-history
     outcomeLabels,
+    description: raw.description?.trim() || undefined,
   };
 }

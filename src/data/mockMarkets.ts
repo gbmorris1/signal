@@ -16,6 +16,8 @@ export const MOCK_MARKETS: Market[] = [
     signal: 'opportunity',
     updatedAt: now,
     outcomeLabels: ['Yes', 'No'] as [string, string],
+    description:
+      'Resolves Yes if the Federal Reserve announces a cut to the federal funds target rate at its September FOMC meeting. Resolves No if rates are held or raised.',
   },
   {
     id: 'polymarket:btc-100k-2026',

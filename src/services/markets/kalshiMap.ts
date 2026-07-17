@@ -16,6 +16,7 @@ export interface KalshiRawMarket {
   yes_ask_dollars?: string | number;
   volume_24h_fp?: string | number;
   volume_fp?: string | number;
+  rules_primary?: string;
 }
 
 export interface KalshiRawEvent {
@@ -88,6 +89,7 @@ export function mapKalshiMarket(event: KalshiRawEvent, raw: KalshiRawMarket): Ma
     // For outcome legs the "yes" side IS the named outcome (a person/answer);
     // the "no" side is everyone/everything else.
     outcomeLabels: multi && sub ? [sub, 'Field'] : ['Yes', 'No'],
+    description: raw.rules_primary?.trim() || undefined,
   };
 }
 

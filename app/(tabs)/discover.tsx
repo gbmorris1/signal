@@ -17,7 +17,6 @@ import { colors, categoryColors, radius, spacing, typography, card } from '@/the
 import { getMarketSource } from '@/services/markets';
 import { MarketCard } from '@/components/MarketCard';
 import { PlatformBadge } from '@/components/Chip';
-import { Enter } from '@/components/motion';
 import { pct, signedPct } from '@/lib/format';
 import type { Category, Market } from '@/types';
 
@@ -34,8 +33,8 @@ const CATEGORIES: (Category | 'all')[] = [
 type Section = 'trending' | 'movers' | 'ai';
 const SECTIONS: { key: Section; label: string }[] = [
   { key: 'trending', label: 'Trending' },
-  { key: 'movers', label: 'Biggest Movers' },
-  { key: 'ai', label: 'AI Opportunities' },
+  { key: 'movers', label: 'Movers' },
+  { key: 'ai', label: 'AI picks' },
 ];
 
 export default function DiscoverScreen() {
@@ -69,7 +68,8 @@ export default function DiscoverScreen() {
     return b.volume - a.volume; // trending
   });
 
-  // Horizontal rail: top movers across everything (independent of filters).
+  // Horizontal rail: sharpest movers across everything. Always rendered (when
+  // not searching) so the header layout never jumps between sections.
   const rail = [...data]
     .sort((a, b) => Math.abs(b.change24h) - Math.abs(a.change24h))
     .slice(0, 8);
@@ -79,6 +79,7 @@ export default function DiscoverScreen() {
       data={sorted}
       keyExtractor={(m) => m.id}
       contentContainerStyle={styles.content}
+      keyboardShouldPersistTaps="handled"
       refreshControl={
         <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.accent} />
       }
@@ -101,58 +102,69 @@ export default function DiscoverScreen() {
             )}
           </View>
 
-          {!searching && section === 'trending' && rail.length > 0 && (
-            <View>
+          {!searching && (
+            <View style={styles.railBlock}>
               <Text style={styles.railLabel}>ON THE MOVE</Text>
               <ScrollView
                 horizontal
                 showsHorizontalScrollIndicator={false}
                 contentContainerStyle={styles.rail}
               >
-                {rail.map((m, i) => (
-                  <Enter key={m.id} index={i}>
-                    <RailCard market={m} />
-                  </Enter>
+                {rail.map((m) => (
+                  <RailCard key={m.id} market={m} />
                 ))}
               </ScrollView>
             </View>
           )}
 
-          <View style={styles.row}>
-            {SECTIONS.map((s) => (
-              <Toggle
-                key={s.key}
-                label={s.label}
-                active={section === s.key}
-                onPress={() => {
-                  void Haptics.selectionAsync();
-                  setSection(s.key);
-                }}
-              />
-            ))}
+          {/* Segmented view control: exactly one is always active by design. */}
+          <View style={styles.segment}>
+            {SECTIONS.map((s) => {
+              const active = section === s.key;
+              return (
+                <Pressable
+                  key={s.key}
+                  style={[styles.segmentTab, active && styles.segmentActive]}
+                  onPress={() => {
+                    if (!active) void Haptics.selectionAsync();
+                    setSection(s.key);
+                  }}
+                >
+                  <Text style={[styles.segmentText, active && styles.segmentTextActive]}>
+                    {s.label}
+                  </Text>
+                </Pressable>
+              );
+            })}
           </View>
-          <View style={styles.row}>
-            {CATEGORIES.map((c) => (
-              <Toggle
-                key={c}
-                label={c === 'all' ? 'All' : c[0].toUpperCase() + c.slice(1)}
-                active={category === c}
-                tint={c !== 'all' ? categoryColors[c] : undefined}
-                onPress={() => {
-                  void Haptics.selectionAsync();
-                  // Tapping the active category clears it back to All.
-                  setCategory(category === c ? 'all' : c);
-                }}
-              />
-            ))}
-          </View>
+
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.chipRow}
+          >
+            {CATEGORIES.map((c) => {
+              const active = category === c;
+              const tint = c !== 'all' ? categoryColors[c] : colors.accent;
+              return (
+                <Pressable
+                  key={c}
+                  onPress={() => {
+                    void Haptics.selectionAsync();
+                    setCategory(active ? 'all' : c);
+                  }}
+                  style={[styles.chip, active && { backgroundColor: `${tint}22`, borderColor: tint }]}
+                >
+                  <Text style={[styles.chipText, active && { color: colors.text }]}>
+                    {c === 'all' ? 'All' : c[0].toUpperCase() + c.slice(1)}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </ScrollView>
         </View>
       }
-      renderItem={({ item, index }) => (
-        <Enter index={Math.min(index, 6)}>
-          <MarketCard market={item} />
-        </Enter>
-      )}
+      renderItem={({ item }) => <MarketCard market={item} />}
       ItemSeparatorComponent={() => <View style={{ height: spacing.md }} />}
       ListEmptyComponent={
         isLoading ? (
@@ -203,31 +215,6 @@ function RailCard({ market }: { market: Market }) {
   );
 }
 
-function Toggle({
-  label,
-  active,
-  tint,
-  onPress,
-}: {
-  label: string;
-  active: boolean;
-  tint?: string;
-  onPress: () => void;
-}) {
-  const activeColor = tint ?? colors.accent;
-  return (
-    <Pressable
-      onPress={onPress}
-      style={[
-        styles.toggle,
-        active && { backgroundColor: `${activeColor}22`, borderColor: activeColor },
-      ]}
-    >
-      <Text style={[styles.toggleText, active && { color: colors.text }]}>{label}</Text>
-    </Pressable>
-  );
-}
-
 const styles = StyleSheet.create({
   content: { padding: spacing.lg, paddingBottom: spacing.xxl },
   searchWrap: {
@@ -241,6 +228,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
   },
   search: { flex: 1, paddingVertical: spacing.md, color: colors.text, ...typography.body },
+  railBlock: { minHeight: 132 }, // fixed footprint: the header never reflows
   railLabel: { ...typography.kicker, color: colors.textFaint, marginBottom: spacing.sm },
   rail: { gap: spacing.sm, paddingRight: spacing.lg },
   railCard: {
@@ -252,23 +240,32 @@ const styles = StyleSheet.create({
     padding: spacing.md,
     gap: spacing.sm,
   },
-  railTitle: { fontSize: 13, fontWeight: '600', color: colors.text, lineHeight: 17, minHeight: 34 },
+  railTitle: { fontSize: 13, fontWeight: '700', color: colors.text, lineHeight: 17, minHeight: 34 },
   railStats: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' },
   railProb: { ...typography.mono, color: colors.text, fontSize: 16 },
   railDelta: { fontSize: 12, fontWeight: '700', fontVariant: ['tabular-nums'] },
-  row: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
-  toggle: {
+  segment: {
+    flexDirection: 'row',
+    backgroundColor: colors.surface,
+    borderRadius: radius.md,
+    borderColor: colors.border,
+    borderWidth: 1,
+    padding: 3,
+  },
+  segmentTab: { flex: 1, paddingVertical: spacing.sm + 2, alignItems: 'center', borderRadius: radius.md - 3 },
+  segmentActive: { backgroundColor: colors.surfaceElevated },
+  segmentText: { color: colors.textFaint, fontWeight: '700', fontSize: 13 },
+  segmentTextActive: { color: colors.text },
+  chipRow: { gap: spacing.sm, paddingRight: spacing.lg },
+  chip: {
     borderWidth: 1,
     borderColor: colors.border,
     borderRadius: radius.pill,
-    paddingHorizontal: spacing.md,
-    paddingVertical: 6,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: 7,
   },
-  toggleText: { color: colors.textMuted, fontSize: 13, fontWeight: '600' },
-  skeleton: {
-    ...card,
-    gap: spacing.sm,
-  },
+  chipText: { color: colors.textMuted, fontSize: 13, fontWeight: '700' },
+  skeleton: { ...card, gap: spacing.sm },
   bone: { height: 10, borderRadius: 5, backgroundColor: colors.surfaceElevated },
   empty: { alignItems: 'center', gap: spacing.sm, marginTop: spacing.xxl, paddingHorizontal: spacing.xl },
   emptyTitle: { ...typography.heading, color: colors.textMuted },

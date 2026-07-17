@@ -32,6 +32,7 @@ export default function MarketDetailScreen() {
   const [gated, setGated] = useState(false);
   const [teaser, setTeaser] = useState<string | null>(null);
   const [showScore, setShowScore] = useState(false);
+  const [aboutExpanded, setAboutExpanded] = useState(false);
 
   const { data: market } = useQuery<Market | null>({
     queryKey: ['market', marketId],
@@ -155,6 +156,20 @@ export default function MarketDetailScreen() {
         </View>
         <ProbabilityChart data={snapshots} width={width - spacing.lg * 4} up={up} />
       </View>
+
+      {market.description && (
+        <View style={styles.card}>
+          <Text style={styles.cardLabel}>About this market</Text>
+          <Text style={styles.aboutText} numberOfLines={aboutExpanded ? undefined : 3}>
+            {market.description}
+          </Text>
+          {market.description.length > 140 && (
+            <Pressable hitSlop={8} onPress={() => setAboutExpanded((v) => !v)}>
+              <Text style={styles.aboutMore}>{aboutExpanded ? 'Show less' : 'Read more'}</Text>
+            </Pressable>
+          )}
+        </View>
+      )}
 
       <View style={styles.card}>
         <Text style={styles.cardLabel}>Platform availability</Text>
@@ -428,5 +443,7 @@ const styles = StyleSheet.create({
   metaLabel: { color: colors.textMuted, ...typography.body },
   metaValue: { color: colors.text, ...typography.mono },
   compareEmpty: { ...typography.caption, color: colors.textMuted, lineHeight: 18 },
+  aboutText: { ...typography.body, color: colors.textMuted, lineHeight: 21 },
+  aboutMore: { fontSize: 12, fontWeight: '700', color: colors.accent, marginTop: 2 },
   thisMarket: { fontSize: 11, color: colors.textFaint, fontStyle: 'italic' },
 });
