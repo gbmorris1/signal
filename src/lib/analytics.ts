@@ -17,7 +17,8 @@ export type FunnelEvent =
   | 'trial_start'
   | 'external_open'
   | 'demo_ai_blocked'
-  | 'demo_watchlist_blocked';
+  | 'demo_watchlist_blocked'
+  | 'watchlist_limit_hit';
 
 let currentUserId: string | null = null;
 

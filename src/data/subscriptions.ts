@@ -4,7 +4,7 @@ import type { SubscriptionPlan } from '@/types';
 export const FEATURE_DETAILS: Record<string, string> = {
   'Browse markets': 'Full access to every live Polymarket and Kalshi market, updated continuously.',
   'Daily briefing': 'A ranked morning digest of the markets that moved and why they matter.',
-  'Limited AI analysis': '3 AI market analyses per day: summary, bull/bear cases, catalysts, and risks.',
+  'Limited AI analysis': '1 AI market analysis per day: summary, bull/bear cases, catalysts, and risks.',
   'More AI reports': '25 AI analyses per day, with results cached so repeat views are instant.',
   'Personalized feed': 'Your briefing is re-ranked around the categories you follow and your experience level.',
   'Alerts': 'Push notifications when a watched market moves sharply, including premium AI-shift alerts explaining the move.',

@@ -138,11 +138,19 @@ export default function MarketDetailScreen() {
       router.push('/auth');
       return;
     }
-    void Haptics.impactAsync(
-      saved ? Haptics.ImpactFeedbackStyle.Light : Haptics.ImpactFeedbackStyle.Medium,
-    );
-    if (!saved) track('watchlist_add', { market_id: market.id });
-    toggle(market);
+    if (!saved) {
+      const ok = toggle(market);
+      if (!ok) {
+        track('watchlist_limit_hit', { market_id: market.id, tier: entitlements.tier });
+        router.push('/paywall?highlight=pro');
+        return;
+      }
+      void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      track('watchlist_add', { market_id: market.id });
+    } else {
+      toggle(market);
+      void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
   }
 
   function leaveToPlatform() {

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '@/state/auth';
+import { useEntitlement } from '@/state/entitlement';
 import { addWatch, listWatchlistIds, removeWatch } from '@/services/watchlist';
 import type { Market } from '@/types';
 
@@ -22,6 +23,7 @@ async function persist() {
 
 export function useWatchlist() {
   const { profile } = useAuth();
+  const { entitlements } = useEntitlement();
   const userId = profile?.id ?? null;
   const [ids, setIds] = useState<string[]>(memory);
 
@@ -45,16 +47,19 @@ export function useWatchlist() {
     };
   }, [userId]);
 
+  /** Returns false (and leaves the watchlist untouched) if adding would exceed the tier's cap. */
   const toggle = useCallback(
-    (market: Market) => {
+    (market: Market): boolean => {
       const isOn = memory.includes(market.id);
+      if (!isOn && memory.length >= entitlements.watchlistLimit) return false;
       memory = isOn ? memory.filter((x) => x !== market.id) : [...memory, market.id];
       void persist();
       if (userId) {
         void (isOn ? removeWatch(userId, market.id) : addWatch(userId, market));
       }
+      return true;
     },
-    [userId],
+    [userId, entitlements.watchlistLimit],
   );
 
   const has = useCallback((id: string) => ids.includes(id), [ids]);

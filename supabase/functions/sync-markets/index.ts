@@ -23,6 +23,12 @@ const MOVE_THRESHOLD = 0.05;
 const AI_SHIFT_THRESHOLD = 0.08;
 const GAMMA = 'https://gamma-api.polymarket.com/markets?active=true&closed=false&limit=60&order=volume&ascending=false';
 
+// Alerts are a Pro+ feature (server-authoritative, mirrors analyze-market's
+// tier resolution: an active `subscriptions` row wins, else `users.plan`).
+function alertsEnabledForPlan(plan: string): boolean {
+  return plan === 'pro' || plan === 'trader';
+}
+
 function num(v: unknown, d = 0): number {
   const n = typeof v === 'string' ? parseFloat(v) : typeof v === 'number' ? v : NaN;
   return Number.isFinite(n) ? n : d;
@@ -143,24 +149,48 @@ Deno.serve(async (req: Request) => {
       if (hit) {
         const { data: watchers } = await supabase
           .from('watchlists')
-          .select('user_id, users(expo_push_token)')
+          .select('user_id, users(expo_push_token, plan)')
           .eq('market_id', id);
 
         if (watchers && watchers.length > 0) {
-          const rows = watchers.map((w: { user_id: string }) => ({
-            user_id: w.user_id,
-            market_id: id,
-            kind: hit.kind,
-            title: hit.title,
-            body: hit.body,
-          }));
-          await supabase.from('alerts').insert(rows);
-          alertsCreated += rows.length;
+          type Watcher = {
+            user_id: string;
+            users?: { expo_push_token?: string; plan?: string } | null;
+          };
+          const userIds = (watchers as Watcher[]).map((w) => w.user_id);
+          const { data: subs } = await supabase
+            .from('subscriptions')
+            .select('user_id, plan, active')
+            .in('user_id', userIds);
+          const subByUser = new Map(
+            (subs ?? []).map((s: { user_id: string; plan: string; active: boolean }) => [
+              s.user_id,
+              s,
+            ]),
+          );
 
-          const tokens = watchers
-            .map((w: { users?: { expo_push_token?: string } | null }) => w.users?.expo_push_token)
-            .filter((t): t is string => !!t);
-          await sendPush(tokens, hit.title, hit.body);
+          const eligible = (watchers as Watcher[]).filter((w) => {
+            const sub = subByUser.get(w.user_id);
+            const plan = (sub?.active && sub.plan) || w.users?.plan || 'free';
+            return alertsEnabledForPlan(plan);
+          });
+
+          if (eligible.length > 0) {
+            const rows = eligible.map((w) => ({
+              user_id: w.user_id,
+              market_id: id,
+              kind: hit.kind,
+              title: hit.title,
+              body: hit.body,
+            }));
+            await supabase.from('alerts').insert(rows);
+            alertsCreated += rows.length;
+
+            const tokens = eligible
+              .map((w) => w.users?.expo_push_token)
+              .filter((t): t is string => !!t);
+            await sendPush(tokens, hit.title, hit.body);
+          }
         }
       }
     }
