@@ -8,15 +8,24 @@ import { colors, radius, spacing, typography, card } from '@/theme';
 import { getMarketSource } from '@/services/markets';
 import { PlatformBadge } from '@/components/Chip';
 import { OutcomeSplit } from '@/components/OutcomeSplit';
+import { SwipeableRow } from '@/components/SwipeableRow';
 import { Enter } from '@/components/motion';
 import { useWatchlist } from '@/state/watchlist';
 import { signedPct } from '@/lib/format';
 import type { Market } from '@/types';
 
+type SortKey = 'recent' | 'mover' | 'volume';
+const SORTS: { key: SortKey; label: string }[] = [
+  { key: 'recent', label: 'Recent' },
+  { key: 'mover', label: 'Movers' },
+  { key: 'volume', label: 'Volume' },
+];
+
 export default function WatchlistScreen() {
   const source = useMemo(() => getMarketSource(), []);
   const { ids, toggle } = useWatchlist();
   const [refreshing, setRefreshing] = useState(false);
+  const [sort, setSort] = useState<SortKey>('recent');
   const { data = [], isLoading, refetch } = useQuery<Market[]>({
     queryKey: ['markets', 'all'],
     queryFn: () => source.listMarkets(),
@@ -29,7 +38,14 @@ export default function WatchlistScreen() {
     setRefreshing(false);
   }, [refetch]);
 
-  const saved = data.filter((m: Market) => ids.includes(m.id));
+  // `ids` is insertion-ordered (oldest first); "Recent" wants newest first.
+  const saved = useMemo(() => {
+    const list = data.filter((m: Market) => ids.includes(m.id));
+    if (sort === 'mover') return [...list].sort((a, b) => Math.abs(b.change24h) - Math.abs(a.change24h));
+    if (sort === 'volume') return [...list].sort((a, b) => b.volume - a.volume);
+    const order = new Map(ids.map((id, i) => [id, i]));
+    return [...list].sort((a, b) => (order.get(b.id) ?? 0) - (order.get(a.id) ?? 0));
+  }, [data, ids, sort]);
 
   function remove(market: Market) {
     void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -46,14 +62,37 @@ export default function WatchlistScreen() {
       }
       ListHeaderComponent={
         saved.length > 0 ? (
-          <Text style={styles.kicker}>
-            {saved.length} {saved.length === 1 ? 'MARKET' : 'MARKETS'} WATCHED
-          </Text>
+          <View style={styles.header}>
+            <Text style={styles.kicker}>
+              {saved.length} {saved.length === 1 ? 'MARKET' : 'MARKETS'} WATCHED
+            </Text>
+            <View style={styles.segment}>
+              {SORTS.map((s) => {
+                const active = sort === s.key;
+                return (
+                  <Pressable
+                    key={s.key}
+                    style={[styles.segmentTab, active && styles.segmentActive]}
+                    onPress={() => {
+                      if (!active) void Haptics.selectionAsync();
+                      setSort(s.key);
+                    }}
+                  >
+                    <Text style={[styles.segmentText, active && styles.segmentTextActive]}>
+                      {s.label}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+          </View>
         ) : null
       }
       renderItem={({ item, index }) => (
         <Enter index={index}>
-          <WatchRow market={item} onRemove={() => remove(item)} />
+          <SwipeableRow onRemove={() => remove(item)}>
+            <WatchRow market={item} onRemove={() => remove(item)} />
+          </SwipeableRow>
         </Enter>
       )}
       ItemSeparatorComponent={() => <View style={{ height: spacing.md }} />}
@@ -106,7 +145,20 @@ function WatchRow({ market, onRemove }: { market: Market; onRemove: () => void }
 
 const styles = StyleSheet.create({
   content: { padding: spacing.lg, paddingBottom: spacing.xxl, flexGrow: 1 },
-  kicker: { ...typography.kicker, color: colors.textFaint, marginBottom: spacing.lg },
+  header: { marginBottom: spacing.lg, gap: spacing.md },
+  kicker: { ...typography.kicker, color: colors.textFaint },
+  segment: {
+    flexDirection: 'row',
+    backgroundColor: colors.surface,
+    borderRadius: radius.md,
+    borderColor: colors.border,
+    borderWidth: 1,
+    padding: 3,
+  },
+  segmentTab: { flex: 1, paddingVertical: spacing.sm + 2, alignItems: 'center', borderRadius: radius.md - 3 },
+  segmentActive: { backgroundColor: colors.surfaceElevated },
+  segmentText: { color: colors.textFaint, fontWeight: '700', fontSize: 13 },
+  segmentTextActive: { color: colors.text },
   row: {
     ...card,
     gap: spacing.md,

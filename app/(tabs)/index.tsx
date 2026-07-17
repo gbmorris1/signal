@@ -5,10 +5,11 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery } from '@tanstack/react-query';
-import { colors, radius, spacing, typography, card } from '@/theme';
+import { colors, radius, spacing, typography } from '@/theme';
 import { getMarketSource } from '@/services/markets';
 import { recommendFeedDetailed, type RankedMarket } from '@/services/recommend';
 import { MarketCard } from '@/components/MarketCard';
+import { CardSkeleton } from '@/components/Skeleton';
 import { AnimatedNumber, Enter } from '@/components/motion';
 import { signedPct } from '@/lib/format';
 import { useAuth } from '@/state/auth';
@@ -94,7 +95,19 @@ export default function HomeScreen() {
                     <Text style={styles.heroLabel}>markets tracked</Text>
                   </View>
                   <View style={styles.heroDivider} />
-                  <View style={styles.heroStat}>
+                  <Pressable
+                    style={styles.heroStat}
+                    disabled={!biggestMover}
+                    hitSlop={4}
+                    onPress={() =>
+                      biggestMover &&
+                      router.push(`/market/${encodeURIComponent(biggestMover.id)}`)
+                    }
+                    accessibilityRole="button"
+                    accessibilityLabel={
+                      biggestMover ? `View ${biggestMover.title}, today's biggest move` : undefined
+                    }
+                  >
                     <AnimatedNumber
                       value={biggestMover ? biggestMover.change24h * 100 : 0}
                       format={(v) => `${v >= 0 ? '+' : ''}${Math.round(v)}%`}
@@ -107,7 +120,7 @@ export default function HomeScreen() {
                       ]}
                     />
                     <Text style={styles.heroLabel}>biggest move</Text>
-                  </View>
+                  </Pressable>
                   <View style={styles.heroDivider} />
                   <View style={styles.heroStat}>
                     <AnimatedNumber value={platforms} style={styles.heroValue} />
@@ -132,25 +145,27 @@ export default function HomeScreen() {
           </Enter>
         )}
         ItemSeparatorComponent={() => <View style={{ height: spacing.md }} />}
-        ListEmptyComponent={isLoading ? <SkeletonCards /> : null}
+        ListEmptyComponent={
+          isLoading ? (
+            <CardSkeleton />
+          ) : (
+            <View style={styles.empty}>
+              <Ionicons name="checkmark-done-circle-outline" size={28} color={colors.textFaint} />
+              <Text style={styles.emptyTitle}>Nothing urgent today</Text>
+              <Text style={styles.emptyBody}>
+                Markets are calm — nothing crossed the opportunity or watch threshold. Browse
+                everything else in Discover.
+              </Text>
+              <Pressable style={styles.emptyCta} onPress={() => router.push('/(tabs)/discover')}>
+                <Text style={styles.emptyCtaText}>Browse markets</Text>
+              </Pressable>
+            </View>
+          )
+        }
       />
 
       <HowItWorks visible={showHow} onClose={() => setShowHow(false)} hasInterests={interests.length > 0} />
     </SafeAreaView>
-  );
-}
-
-function SkeletonCards() {
-  return (
-    <View style={{ gap: spacing.md }}>
-      {[0, 1, 2].map((i) => (
-        <View key={i} style={styles.skeleton}>
-          <View style={[styles.bone, { width: '30%' }]} />
-          <View style={[styles.bone, { width: '85%', height: 16 }]} />
-          <View style={[styles.bone, { width: '40%', height: 24, marginTop: spacing.sm }]} />
-        </View>
-      ))}
-    </View>
   );
 }
 
@@ -254,11 +269,17 @@ const styles = StyleSheet.create({
     marginBottom: spacing.lg,
   },
   demoText: { color: colors.text, ...typography.caption, fontWeight: '600' },
-  skeleton: {
-    ...card,
-    gap: spacing.sm,
+  empty: { alignItems: 'center', gap: spacing.sm, marginTop: spacing.xxl, paddingHorizontal: spacing.xl },
+  emptyTitle: { ...typography.heading, color: colors.textMuted },
+  emptyBody: { ...typography.caption, color: colors.textFaint, textAlign: 'center', lineHeight: 18 },
+  emptyCta: {
+    backgroundColor: colors.accent,
+    borderRadius: radius.md,
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.md,
+    marginTop: spacing.md,
   },
-  bone: { height: 10, borderRadius: 5, backgroundColor: colors.surfaceElevated },
+  emptyCtaText: { color: colors.bg, fontWeight: '700' },
   backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.72)', justifyContent: 'flex-end' },
   sheet: {
     backgroundColor: colors.surface,

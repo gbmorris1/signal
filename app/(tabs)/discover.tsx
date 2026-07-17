@@ -13,9 +13,10 @@ import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useQuery } from '@tanstack/react-query';
-import { colors, categoryColors, radius, spacing, typography, card } from '@/theme';
+import { colors, categoryColors, radius, spacing, typography } from '@/theme';
 import { getMarketSource } from '@/services/markets';
 import { MarketCard } from '@/components/MarketCard';
+import { CardSkeleton } from '@/components/Skeleton';
 import { PlatformBadge } from '@/components/Chip';
 import { pct, signedPct } from '@/lib/format';
 import type { Category, Market } from '@/types';
@@ -183,15 +184,7 @@ export default function DiscoverScreen() {
       ItemSeparatorComponent={() => <View style={{ height: spacing.md }} />}
       ListEmptyComponent={
         isLoading ? (
-          <View style={{ gap: spacing.md }}>
-            {[0, 1, 2].map((i) => (
-              <View key={i} style={styles.skeleton}>
-                <View style={[styles.bone, { width: '30%' }]} />
-                <View style={[styles.bone, { width: '85%', height: 16 }]} />
-                <View style={[styles.bone, { width: '40%', height: 24, marginTop: spacing.sm }]} />
-              </View>
-            ))}
-          </View>
+          <CardSkeleton />
         ) : (
           <View style={styles.empty}>
             <Ionicons name="telescope-outline" size={28} color={colors.textFaint} />
@@ -280,8 +273,6 @@ const styles = StyleSheet.create({
     paddingVertical: 7,
   },
   chipText: { color: colors.textMuted, fontSize: 13, fontWeight: '700' },
-  skeleton: { ...card, gap: spacing.sm },
-  bone: { height: 10, borderRadius: 5, backgroundColor: colors.surfaceElevated },
   empty: { alignItems: 'center', gap: spacing.sm, marginTop: spacing.xxl, paddingHorizontal: spacing.xl },
   emptyTitle: { ...typography.heading, color: colors.textMuted },
   emptyBody: { ...typography.caption, color: colors.textFaint, textAlign: 'center', lineHeight: 18 },

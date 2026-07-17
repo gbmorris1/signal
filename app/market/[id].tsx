@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Animated,
   Linking,
@@ -8,6 +8,7 @@ import {
   View,
   StyleSheet,
   useWindowDimensions,
+  type TextStyle,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router, useLocalSearchParams, Stack } from 'expo-router';
@@ -23,6 +24,7 @@ import { ScoreExplainer } from '@/components/ScoreExplainer';
 import { OutcomeSplit } from '@/components/OutcomeSplit';
 import { ProbabilityGauge } from '@/components/ProbabilityGauge';
 import { ExternalLinkSheet } from '@/components/ExternalLinkSheet';
+import { Bone } from '@/components/Skeleton';
 import { Enter } from '@/components/motion';
 import { SignalChip, PlatformBadge } from '@/components/Chip';
 import { useWatchlist } from '@/state/watchlist';
@@ -36,6 +38,14 @@ const CONFIDENCE_COLOR: Record<Confidence, string> = {
   medium: colors.accent,
   high: colors.up,
 };
+
+function timeAgo(iso: string): string {
+  const mins = Math.round((Date.now() - new Date(iso).getTime()) / 60000);
+  if (mins < 1) return 'just now';
+  if (mins < 60) return `${mins}m ago`;
+  if (mins < 1440) return `${Math.round(mins / 60)}h ago`;
+  return `${Math.round(mins / 1440)}d ago`;
+}
 
 function platformColor(p: 'polymarket' | 'kalshi'): string {
   return p === 'polymarket' ? colors.polymarket : colors.kalshi;
@@ -56,8 +66,21 @@ export default function MarketDetailScreen() {
   const [showScore, setShowScore] = useState(false);
   const [aboutExpanded, setAboutExpanded] = useState(false);
   const [showExternal, setShowExternal] = useState(false);
+  const [highlightedSource, setHighlightedSource] = useState<number | null>(null);
+  const scrollRef = useRef<ScrollView>(null);
+  const highlightTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const EXT_SKIP_KEY = 'oddiq.skipExternalWarning.v1';
+
+  // Sources card is always the last thing on the page, so scrolling to the
+  // end reliably surfaces it without a fragile measureLayout call.
+  function onCite(n: number) {
+    void Haptics.selectionAsync();
+    setHighlightedSource(n);
+    scrollRef.current?.scrollToEnd({ animated: true });
+    if (highlightTimer.current) clearTimeout(highlightTimer.current);
+    highlightTimer.current = setTimeout(() => setHighlightedSource(null), 1800);
+  }
 
   const { data: market } = useQuery<Market | null>({
     queryKey: ['market', marketId],
@@ -88,10 +111,10 @@ export default function MarketDetailScreen() {
   if (!market) {
     return (
       <View style={styles.loading}>
-        <View style={[styles.skeleton, { width: '55%', height: 14 }]} />
-        <View style={[styles.skeleton, { width: '90%', height: 22 }]} />
-        <View style={[styles.skeleton, { width: '100%', height: 120, borderRadius: radius.lg }]} />
-        <View style={[styles.skeleton, { width: '100%', height: 200, borderRadius: radius.lg }]} />
+        <Bone style={{ width: '55%', height: 14 }} />
+        <Bone style={{ width: '90%', height: 22 }} />
+        <Bone style={{ width: '100%', height: 120, borderRadius: radius.lg }} />
+        <Bone style={{ width: '100%', height: 200, borderRadius: radius.lg }} />
       </View>
     );
   }
@@ -168,7 +191,11 @@ export default function MarketDetailScreen() {
   }
 
   return (
-    <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+    <ScrollView
+      ref={scrollRef}
+      contentContainerStyle={styles.content}
+      showsVerticalScrollIndicator={false}
+    >
       <Stack.Screen
         options={{
           title: market.platform.charAt(0).toUpperCase() + market.platform.slice(1),
@@ -346,7 +373,11 @@ export default function MarketDetailScreen() {
         </Pressable>
       ) : (
         <Enter>
-          <Analysis analysis={analysis} />
+          <Analysis
+            analysis={analysis}
+            onCite={onCite}
+            highlightedSource={highlightedSource}
+          />
         </Enter>
       )}
 
@@ -402,7 +433,15 @@ function AnalysisSkeleton({ tier }: { tier: string }) {
   );
 }
 
-function Analysis({ analysis }: { analysis: AIAnalysis }) {
+function Analysis({
+  analysis,
+  onCite,
+  highlightedSource,
+}: {
+  analysis: AIAnalysis;
+  onCite: (n: number) => void;
+  highlightedSource: number | null;
+}) {
   const confColor = CONFIDENCE_COLOR[analysis.confidence] ?? colors.accent;
   return (
     <View style={{ gap: spacing.md }}>
@@ -411,14 +450,16 @@ function Analysis({ analysis }: { analysis: AIAnalysis }) {
           <View style={styles.edgeHead}>
             <Ionicons name="flash" size={15} color={colors.accent} />
             <Text style={styles.edgeLabel}>ODDIQ'S EDGE</Text>
+            <View style={{ flex: 1 }} />
+            <Text style={styles.freshness}>Updated {timeAgo(analysis.createdAt)}</Text>
           </View>
-          <Text style={styles.edgeBody}>{analysis.edge}</Text>
+          <CitedText text={analysis.edge} style={styles.edgeBody} onCite={onCite} />
         </View>
       ) : null}
-      <Block title="Summary" body={analysis.summary} />
-      <Block title="Why it moved" body={analysis.whyChanged} />
-      <Block title="Bull case" body={analysis.bullCase} accent={colors.up} />
-      <Block title="Bear case" body={analysis.bearCase} accent={colors.down} />
+      <Block title="Summary" body={analysis.summary} onCite={onCite} />
+      <Block title="Why it moved" body={analysis.whyChanged} onCite={onCite} />
+      <Block title="Bull case" body={analysis.bullCase} accent={colors.up} onCite={onCite} />
+      <Block title="Bear case" body={analysis.bearCase} accent={colors.down} onCite={onCite} />
       <ListBlock title="Catalysts to watch" items={analysis.catalysts} icon="calendar-outline" />
       <ListBlock title="Risk factors" items={analysis.riskFactors} icon="warning-outline" />
       {analysis.sources.length > 0 && (
@@ -427,11 +468,13 @@ function Analysis({ analysis }: { analysis: AIAnalysis }) {
           {analysis.sources.map((s, i) => (
             <Pressable
               key={s.url + i}
-              style={styles.sourceRow}
+              style={[styles.sourceRow, highlightedSource === i + 1 && styles.sourceRowActive]}
               onPress={() => {
                 track('external_open', { kind: 'source', url: s.url });
                 if (s.url) void Linking.openURL(s.url);
               }}
+              accessibilityRole="link"
+              accessibilityLabel={`Source ${i + 1}: ${s.title || s.url}`}
             >
               <Text style={styles.sourceIndex}>[{i + 1}]</Text>
               <View style={{ flex: 1 }}>
@@ -466,12 +509,49 @@ function Analysis({ analysis }: { analysis: AIAnalysis }) {
   );
 }
 
-function Block({ title, body, accent }: { title: string; body: string; accent?: string }) {
+function Block({
+  title,
+  body,
+  accent,
+  onCite,
+}: {
+  title: string;
+  body: string;
+  accent?: string;
+  onCite: (n: number) => void;
+}) {
   return (
     <View style={[styles.card, accent ? { borderLeftWidth: 3, borderLeftColor: accent } : null]}>
       <Text style={[styles.cardLabel, accent ? { color: accent } : null]}>{title}</Text>
-      <Text style={styles.cardBody}>{body}</Text>
+      <CitedText text={body} style={styles.cardBody} onCite={onCite} />
     </View>
+  );
+}
+
+/** Renders body text with inline [n] citations as tappable chips that jump to Sources. */
+function CitedText({
+  text,
+  style,
+  onCite,
+}: {
+  text: string;
+  style: TextStyle;
+  onCite: (n: number) => void;
+}) {
+  const parts = text.split(/(\[\d+\])/g);
+  return (
+    <Text style={style}>
+      {parts.map((part, i) => {
+        const m = /^\[(\d+)\]$/.exec(part);
+        if (!m) return part;
+        const n = parseInt(m[1], 10);
+        return (
+          <Text key={i} style={styles.citation} onPress={() => onCite(n)} suppressHighlighting>
+            {part}
+          </Text>
+        );
+      })}
+    </Text>
   );
 }
 
@@ -532,7 +612,6 @@ function CompareRow({
 const styles = StyleSheet.create({
   content: { padding: spacing.lg, paddingBottom: spacing.xxxl, gap: spacing.md },
   loading: { flex: 1, backgroundColor: colors.bg, padding: spacing.lg, gap: spacing.md },
-  skeleton: { backgroundColor: colors.surface, borderRadius: radius.sm },
   badgeRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   saveStar: {
     width: 34,
@@ -601,12 +680,16 @@ const styles = StyleSheet.create({
   edgeHead: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
   edgeLabel: { ...typography.kicker, color: colors.accent },
   edgeBody: { ...typography.body, color: colors.text, lineHeight: 22 },
+  freshness: { fontSize: 10, color: colors.textFaint },
+  citation: { color: colors.accent, fontWeight: '700' },
   sourceRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
     paddingVertical: spacing.xs,
+    borderRadius: radius.sm,
   },
+  sourceRowActive: { backgroundColor: colors.accentDim },
   sourceIndex: { ...typography.mono, color: colors.accent, fontSize: 12 },
   sourceTitle: { ...typography.caption, color: colors.text, lineHeight: 16 },
   sourceDate: { fontSize: 10, color: colors.textFaint, marginTop: 1 },
