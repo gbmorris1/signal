@@ -1,22 +1,30 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { PlanTier } from '@/types';
-import { getSubscriptionService } from '@/services/subscriptions';
+import { getSubscriptionService, hasRevenueCat } from '@/services/subscriptions';
 import { entitlementsFor, type Entitlements } from '@/services/subscriptions/entitlements';
+import { useAuth } from '@/state/auth';
 
 /**
- * Live entitlement for the current user. Reads the subscription service (mock or
- * RevenueCat) and exposes the derived feature limits plus purchase/restore.
+ * Live entitlement for the current user.
+ *  - When RevenueCat is configured (production), tier comes from RevenueCat.
+ *  - Until then, tier comes from the server-side `users.plan` on the profile
+ *    (set by the RevenueCat webhook, or manually for testing). This keeps the
+ *    app's gating aligned with the server's enforcement without RevenueCat.
  */
 export function useEntitlement() {
-  const [tier, setTier] = useState<PlanTier>('free');
+  const { profile } = useAuth();
+  const [rcTier, setRcTier] = useState<PlanTier>('free');
   const [loading, setLoading] = useState(true);
 
   const refresh = useCallback(async () => {
+    if (!hasRevenueCat) {
+      setLoading(false);
+      return;
+    }
     try {
-      const svc = getSubscriptionService();
-      setTier(await svc.getTier());
+      setRcTier(await getSubscriptionService().getTier());
     } catch {
-      setTier('free'); // store unreachable / not configured → safe default
+      setRcTier('free');
     } finally {
       setLoading(false);
     }
@@ -26,20 +34,17 @@ export function useEntitlement() {
     void refresh();
   }, [refresh]);
 
-  const purchase = useCallback(
-    async (t: Exclude<PlanTier, 'free'>) => {
-      const svc = getSubscriptionService();
-      const granted = await svc.purchase(t);
-      setTier(granted);
-      return granted;
-    },
-    [],
-  );
+  const tier: PlanTier = hasRevenueCat ? rcTier : profile?.plan ?? 'free';
+
+  const purchase = useCallback(async (t: Exclude<PlanTier, 'free'>) => {
+    const granted = await getSubscriptionService().purchase(t);
+    setRcTier(granted);
+    return granted;
+  }, []);
 
   const restore = useCallback(async () => {
-    const svc = getSubscriptionService();
-    const t = await svc.restore();
-    setTier(t);
+    const t = await getSubscriptionService().restore();
+    setRcTier(t);
     return t;
   }, []);
 
