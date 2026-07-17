@@ -197,13 +197,26 @@ export default function MarketDetailScreen() {
           between their odds is shown.
         </Text>
         <Pressable
-          style={styles.externalBtn}
+          style={[
+            styles.externalBtn,
+            {
+              backgroundColor:
+                market.platform === 'polymarket' ? colors.polymarketDim : colors.kalshiDim,
+              borderColor: platformColor(market.platform),
+            },
+          ]}
           onPress={() => {
             track('external_open', { market_id: market.id, platform: market.platform });
             void Linking.openURL(platformUrl(market));
           }}
         >
-          <Text style={styles.externalText}>
+          {/* simple brand glyph: P / K monogram in the platform color */}
+          <View style={[styles.brandGlyph, { backgroundColor: platformColor(market.platform) }]}>
+            <Text style={styles.brandGlyphText}>
+              {market.platform === 'polymarket' ? 'P' : 'K'}
+            </Text>
+          </View>
+          <Text style={[styles.externalText, { color: platformColor(market.platform) }]}>
             Open on {market.platform === 'polymarket' ? 'Polymarket' : 'Kalshi'}
           </Text>
           <Ionicons name="open-outline" size={14} color={platformColor(market.platform)} />
@@ -396,6 +409,14 @@ const styles = StyleSheet.create({
     marginTop: spacing.sm,
   },
   externalText: { fontSize: 13, fontWeight: '700', color: colors.text },
+  brandGlyph: {
+    width: 18,
+    height: 18,
+    borderRadius: 5,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  brandGlyphText: { fontSize: 11, fontWeight: '700', color: colors.bg },
   aiDisclaimer: { ...typography.caption, color: colors.textFaint, marginTop: -spacing.sm },
   cardLabel: { ...typography.bodyStrong, color: colors.textMuted },
   cardBody: { ...typography.body, color: colors.text, lineHeight: 21 },

@@ -58,21 +58,32 @@ export default function DiscoverScreen() {
 
   const searching = query.trim().length > 0;
 
-  const filtered = data
-    .filter((m: Market) => (category === 'all' ? true : m.category === category))
-    .filter((m: Market) => (searching ? m.title.toLowerCase().includes(query.toLowerCase()) : true));
-
-  const sorted = [...filtered].sort((a, b) => {
-    if (section === 'movers') return Math.abs(b.change24h) - Math.abs(a.change24h);
-    if (section === 'ai') return (b.aiScore ?? 0) - (a.aiScore ?? 0);
-    return b.volume - a.volume; // trending
-  });
+  // Memoized pipeline: hundreds of markets, so recompute only when inputs
+  // change, and cap what we hand the list. 100 rows is beyond what anyone
+  // scrolls, and it keeps filter taps instant.
+  const sorted = useMemo(() => {
+    const q = query.toLowerCase();
+    const filtered = data
+      .filter((m: Market) => (category === 'all' ? true : m.category === category))
+      .filter((m: Market) => (searching ? m.title.toLowerCase().includes(q) : true));
+    return filtered
+      .sort((a, b) => {
+        if (section === 'movers') return Math.abs(b.change24h) - Math.abs(a.change24h);
+        if (section === 'ai') return (b.aiScore ?? 0) - (a.aiScore ?? 0);
+        return b.volume - a.volume; // trending
+      })
+      .slice(0, 100);
+  }, [data, category, section, query, searching]);
 
   // Horizontal rail: sharpest movers across everything. Always rendered (when
   // not searching) so the header layout never jumps between sections.
-  const rail = [...data]
-    .sort((a, b) => Math.abs(b.change24h) - Math.abs(a.change24h))
-    .slice(0, 8);
+  const rail = useMemo(
+    () =>
+      [...data]
+        .sort((a, b) => Math.abs(b.change24h) - Math.abs(a.change24h))
+        .slice(0, 8),
+    [data],
+  );
 
   return (
     <FlatList
@@ -80,6 +91,10 @@ export default function DiscoverScreen() {
       keyExtractor={(m) => m.id}
       contentContainerStyle={styles.content}
       keyboardShouldPersistTaps="handled"
+      initialNumToRender={8}
+      maxToRenderPerBatch={10}
+      windowSize={7}
+      removeClippedSubviews
       refreshControl={
         <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.accent} />
       }

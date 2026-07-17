@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+import { memo, useRef } from 'react';
 import { Animated, Pressable, Text, View, StyleSheet } from 'react-native';
 import { router } from 'expo-router';
 import { colors, categoryColors, radius, spacing, typography, card } from '@/theme';
@@ -7,7 +7,7 @@ import { SignalChip, PlatformBadge } from './Chip';
 import { OutcomeSplit } from './OutcomeSplit';
 import type { Market } from '@/types';
 
-export function MarketCard({ market, reason }: { market: Market; reason?: string }) {
+function MarketCardInner({ market, reason }: { market: Market; reason?: string }) {
   const up = market.change24h >= 0;
   const flat = Math.round(market.change24h * 100) === 0;
   const scale = useRef(new Animated.Value(1)).current;
@@ -72,6 +72,16 @@ export function MarketCard({ market, reason }: { market: Market; reason?: string
     </Animated.View>
   );
 }
+
+// Re-render only when the market data or reason actually changes.
+export const MarketCard = memo(
+  MarketCardInner,
+  (a, b) =>
+    a.market.id === b.market.id &&
+    a.market.probability === b.market.probability &&
+    a.market.change24h === b.market.change24h &&
+    a.reason === b.reason,
+);
 
 function Stat({ label, value }: { label: string; value: string }) {
   return (

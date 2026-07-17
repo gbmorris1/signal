@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Pressable, ScrollView, Text, View, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { router } from 'expo-router';
 import { colors, radius, spacing, typography, buttonPrimary } from '@/theme';
 import { useAuth } from '@/state/auth';
 import type { Category, ExperienceLevel } from '@/types';
@@ -21,10 +22,13 @@ const LEVELS: { key: ExperienceLevel; label: string; hint: string }[] = [
 ];
 
 export default function OnboardingScreen() {
-  const { saveOnboarding } = useAuth();
+  const { profile, saveOnboarding } = useAuth();
   const [step, setStep] = useState<0 | 1>(0);
-  const [interests, setInterests] = useState<Category[]>([]);
-  const [level, setLevel] = useState<ExperienceLevel | null>(null);
+  // Pre-fill when revisiting from Profile to edit preferences.
+  const [interests, setInterests] = useState<Category[]>(profile?.interests ?? []);
+  const [level, setLevel] = useState<ExperienceLevel | null>(
+    profile?.onboarded ? profile.experience : null,
+  );
   const [busy, setBusy] = useState(false);
 
   function toggleInterest(c: Category) {
@@ -36,6 +40,7 @@ export default function OnboardingScreen() {
     setBusy(true);
     await saveOnboarding({ interests, experience: level });
     setBusy(false);
+    router.replace('/(tabs)');
   }
 
   return (

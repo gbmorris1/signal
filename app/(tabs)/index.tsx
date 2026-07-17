@@ -47,15 +47,19 @@ export default function HomeScreen() {
   const interests = profile?.interests ?? [];
   const experience = profile?.experience ?? 'active';
 
-  const ranked = recommendFeedDetailed({ markets: data, interests, experience });
-  const briefing = ranked
-    .filter((r) => r.market.signal === 'opportunity' || r.market.signal === 'watch')
-    .slice(0, 12);
+  const briefing = useMemo(
+    () =>
+      recommendFeedDetailed({ markets: data, interests, experience })
+        .filter((r) => r.market.signal === 'opportunity' || r.market.signal === 'watch')
+        .slice(0, 12),
+    [data, interests, experience],
+  );
 
   // Hero stats across the whole tracked universe.
-  const biggestMover = [...data].sort(
-    (a, b) => Math.abs(b.change24h) - Math.abs(a.change24h),
-  )[0];
+  const biggestMover = useMemo(
+    () => [...data].sort((a, b) => Math.abs(b.change24h) - Math.abs(a.change24h))[0],
+    [data],
+  );
   const platforms = new Set(data.map((m) => m.platform)).size;
 
   return (
