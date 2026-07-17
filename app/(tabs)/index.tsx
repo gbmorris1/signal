@@ -169,7 +169,7 @@ function HowItWorks({
         <Pressable style={styles.sheet} onPress={() => {}}>
           <Text style={styles.sheetTitle}>How your briefing is built</Text>
           <Text style={styles.sheetBody}>
-            Signal scans every live market on Polymarket and Kalshi, then ranks them for you by
+            ODDIQ scans every live market on Polymarket and Kalshi, then ranks them for you by
             blending four factors:
           </Text>
           <Row icon="trending-up" title="Movement" body="Markets that repriced sharply in the last 24h. That's where new information is landing." />

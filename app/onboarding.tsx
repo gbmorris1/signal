@@ -98,7 +98,7 @@ export default function OnboardingScreen() {
               disabled={!level || busy}
               onPress={finish}
             >
-              <Text style={styles.primaryText}>{busy ? 'Setting up…' : 'Start using Signal'}</Text>
+              <Text style={styles.primaryText}>{busy ? 'Setting up…' : 'Start using ODDIQ'}</Text>
             </Pressable>
             <Pressable style={styles.back} onPress={() => setStep(0)}>
               <Text style={styles.backText}>← Back</Text>

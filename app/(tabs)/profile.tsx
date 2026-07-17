@@ -153,7 +153,7 @@ export default function ProfileScreen() {
         />
       </View>
 
-      <Text style={styles.version}>Signal 0.1.0</Text>
+      <Text style={styles.version}>ODDIQ 0.1.0</Text>
     </ScrollView>
   );
 }

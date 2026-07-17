@@ -1,14 +1,16 @@
-// Signal design tokens — dark finance-terminal system.
+// ODDIQ design tokens — dark finance-terminal system.
 // Built on the mobile-app-ui-design rules: one font family, 4 type sizes,
 // 2 weights, opacity-driven text hierarchy, 60/30/10 color, 8-pt grid,
 // soft tinted shadows. No raw hex outside this file.
 import type { TextStyle, ViewStyle } from 'react-native';
 
 export const colors = {
-  // 60% — neutral base
-  bg: '#0A0B0E',
-  surface: '#14161C',
-  surfaceElevated: '#1B1E26',
+  // 60% — neutral base (navy-cast near-black, tuned to the ODDIQ mark)
+  bg: '#080B14',
+  surface: '#111726',
+  surfaceElevated: '#182034',
+  // Deep navy from the wordmark; brand surfaces + icon field.
+  brandNavy: '#0E1E45',
   // hairlines from white opacity so they sit naturally on any surface
   border: 'rgba(244,246,250,0.08)',
   borderStrong: 'rgba(244,246,250,0.15)',
@@ -16,9 +18,11 @@ export const colors = {
   text: '#F5F6F8',
   textMuted: 'rgba(245,246,248,0.64)',
   textFaint: 'rgba(245,246,248,0.40)',
-  // 10% — accent (trust blue) + semantic money colors
-  accent: '#4E8DFF',
-  accentDim: 'rgba(78,141,255,0.14)',
+  // 10% — accent: ODDIQ cyan (the ascending arrow) + supporting brand blue
+  accent: '#22C9F5',
+  accentDim: 'rgba(34,201,245,0.14)',
+  // Mid-blue facet from the mark; secondary brand tone.
+  brandBlue: '#1E6FD9',
   up: '#2FD48C',
   upDim: 'rgba(47,212,140,0.14)',
   down: '#FF5A6B',
@@ -26,7 +30,7 @@ export const colors = {
   warn: '#FFB020',
   // signal chips
   signalOpportunity: '#2FD48C',
-  signalWatch: '#4E8DFF',
+  signalWatch: '#22C9F5',
   signalNeutral: 'rgba(245,246,248,0.64)',
   signalCaution: '#FFB020',
   // platform identities — deliberate exception to the accent budget: platform
@@ -43,7 +47,7 @@ export const colors = {
  */
 export const categoryColors: Record<string, string> = {
   politics: '#FF7A59',
-  finance: '#4E8DFF',
+  finance: '#3B9BFF',
   crypto: '#F7B32B',
   sports: '#2FD48C',
   world: '#9B8CFF',
@@ -111,7 +115,7 @@ export const shadows: Record<'card' | 'raised' | 'glowAccent' | 'glowUp' | 'glow
     elevation: 8,
   },
   glowAccent: {
-    shadowColor: '#4E8DFF',
+    shadowColor: '#22C9F5',
     shadowOpacity: 0.35,
     shadowRadius: 16,
     shadowOffset: { width: 0, height: 0 },
@@ -141,7 +145,7 @@ export const buttonPrimary: ViewStyle = {
   alignItems: 'center',
   justifyContent: 'center',
   ...({
-    shadowColor: '#4E8DFF',
+    shadowColor: '#22C9F5',
     shadowOpacity: 0.35,
     shadowRadius: 10,
     shadowOffset: { width: 0, height: 4 },

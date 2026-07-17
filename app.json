@@ -1,8 +1,8 @@
 {
   "expo": {
-    "name": "Signal",
-    "slug": "signal",
-    "scheme": "signal",
+    "name": "ODDIQ",
+    "slug": "oddiq",
+    "scheme": "oddiq",
     "version": "0.1.0",
     "orientation": "portrait",
     "userInterfaceStyle": "dark",
@@ -10,16 +10,16 @@
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#0A0B0D"
+      "backgroundColor": "#080B14"
     },
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "fi.signal.app"
+      "bundleIdentifier": "ai.oddiq.app"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#0A0B0D"
+        "backgroundColor": "#080B14"
       }
     },
     "web": {

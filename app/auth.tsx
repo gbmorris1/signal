@@ -12,6 +12,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, radius, spacing, typography, buttonPrimary, shadows } from '@/theme';
+import { BrandMark } from '@/components/BrandMark';
 import { useAuth, hasSupabase } from '@/state/auth';
 
 const VALUE_PROPS: { icon: keyof typeof Ionicons.glyphMap; text: string }[] = [
@@ -19,6 +20,8 @@ const VALUE_PROPS: { icon: keyof typeof Ionicons.glyphMap; text: string }[] = [
   { icon: 'sparkles', text: 'AI analysis of why markets move' },
   { icon: 'notifications', text: 'Alerts when your markets shift' },
 ];
+
+const TAGLINE = 'The AI research terminal for prediction markets';
 
 export default function AuthScreen() {
   const { signIn, signUp, enterDemo } = useAuth();
@@ -80,10 +83,10 @@ export default function AuthScreen() {
       >
         <View style={styles.brand}>
           <View style={styles.mark}>
-            <Ionicons name="pulse" size={30} color={colors.accent} />
+            <BrandMark size={44} />
           </View>
-          <Text style={styles.logo}>Signal</Text>
-          <Text style={styles.tagline}>The AI research terminal for prediction markets</Text>
+          <Text style={styles.logo}>ODDIQ</Text>
+          <Text style={styles.tagline}>{TAGLINE}</Text>
         </View>
 
         <View style={styles.props}>
@@ -199,7 +202,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.lg,
     ...shadows.glowAccent,
   },
-  logo: { ...typography.display, color: colors.text, fontSize: 40, textAlign: 'center' },
+  logo: { ...typography.display, color: colors.text, fontSize: 38, letterSpacing: 1, textAlign: 'center' },
   tagline: {
     ...typography.body,
     color: colors.textMuted,
