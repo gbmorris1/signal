@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, radius, spacing, typography, buttonPrimary, shadows } from '@/theme';
+import { LEGAL, SUBSCRIPTION_DISCLOSURE, openUrl } from '@/lib/legal';
 import { PLANS, FEATURE_DETAILS } from '@/data/subscriptions';
 import { useEntitlement } from '@/state/entitlement';
 import { track } from '@/lib/analytics';
@@ -114,14 +115,18 @@ export default function PaywallScreen() {
               {isCurrent ? 'Current plan' : busy ? 'Processing…' : `Try ${plan.name} free for 3 days`}
             </Text>
           </Pressable>
-          {!isCurrent && (
-            <Text style={styles.trialNote}>
-              Then {plan.priceLabel}. Cancel anytime before the trial ends.
-            </Text>
-          )}
+          {!isCurrent && <Text style={styles.disclosure}>{SUBSCRIPTION_DISCLOSURE}</Text>}
           <View style={styles.footRow}>
             <Pressable hitSlop={8} onPress={() => void restore()}>
-              <Text style={styles.footText}>Restore purchases</Text>
+              <Text style={styles.footText}>Restore</Text>
+            </Pressable>
+            <Text style={styles.footDot}>·</Text>
+            <Pressable hitSlop={8} onPress={() => openUrl(LEGAL.termsUrl)}>
+              <Text style={styles.footTextMuted}>Terms</Text>
+            </Pressable>
+            <Text style={styles.footDot}>·</Text>
+            <Pressable hitSlop={8} onPress={() => openUrl(LEGAL.privacyUrl)}>
+              <Text style={styles.footTextMuted}>Privacy</Text>
             </Pressable>
             <Text style={styles.footDot}>·</Text>
             <Pressable hitSlop={8} onPress={() => router.back()}>
@@ -186,7 +191,7 @@ const styles = StyleSheet.create({
   error: { ...typography.caption, color: colors.down, textAlign: 'center' },
   buy: { ...buttonPrimary },
   buyText: { color: colors.bg, fontWeight: '700', fontSize: 15 },
-  trialNote: { fontSize: 11, color: colors.textFaint, textAlign: 'center' },
+  disclosure: { fontSize: 10, color: colors.textFaint, textAlign: 'center', lineHeight: 14 },
   footRow: {
     flexDirection: 'row',
     justifyContent: 'center',

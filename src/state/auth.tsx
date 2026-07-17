@@ -7,9 +7,11 @@ import {
   useState,
   type ReactNode,
 } from 'react';
+import Constants from 'expo-constants';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getSupabase, hasSupabase } from '@/lib/supabase';
 import { setAnalyticsUser } from '@/lib/analytics';
+import { getSubscriptionService } from '@/services/subscriptions';
 import type { Category, ExperienceLevel, UserPreferences, UserProfile } from '@/types';
 
 const PROFILE_KEY = 'signal.profile.v1';
@@ -26,6 +28,9 @@ interface AuthState {
   enterDemo(): void;
   saveOnboarding(prefs: Pick<UserPreferences, 'interests' | 'experience'>): Promise<void>;
   setPushToken(token: string): Promise<void>;
+  resetPassword(email: string): Promise<{ error?: string }>;
+  resendConfirmation(email: string): Promise<{ error?: string }>;
+  deleteAccount(): Promise<{ error?: string }>;
 }
 
 const AuthContext = createContext<AuthState | null>(null);
@@ -47,9 +52,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [demo, setDemo] = useState(false);
 
-  // Keep analytics events attributed to the signed-in user.
+  // Keep analytics + the store identity tied to the signed-in user, so the
+  // RevenueCat webhook records entitlements against this user id.
   useEffect(() => {
     setAnalyticsUser(profile?.id ?? null);
+    if (profile?.id) {
+      const svc = getSubscriptionService();
+      void svc.identify?.(profile.id);
+    }
   }, [profile?.id]);
 
   // Restore session on boot + react to auth changes (e.g. session appearing
@@ -203,6 +213,47 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [profile]);
 
+  const resetPassword = useCallback<AuthState['resetPassword']>(async (email) => {
+    const supabase = getSupabase();
+    if (!supabase) return {};
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: 'oddiq://reset',
+    });
+    return error ? { error: error.message } : {};
+  }, []);
+
+  const resendConfirmation = useCallback<AuthState['resendConfirmation']>(async (email) => {
+    const supabase = getSupabase();
+    if (!supabase) return {};
+    const { error } = await supabase.auth.resend({ type: 'signup', email });
+    return error ? { error: error.message } : {};
+  }, []);
+
+  const deleteAccount = useCallback<AuthState['deleteAccount']>(async () => {
+    const supabase = getSupabase();
+    if (!supabase) {
+      // Mock mode: just clear the local account.
+      setProfile(null);
+      await persistLocal(null);
+      return {};
+    }
+    const token = (await supabase.auth.getSession()).data.session?.access_token;
+    const supabaseUrl = Constants.expoConfig?.extra?.supabaseUrl as string | undefined;
+    try {
+      const res = await fetch(`${supabaseUrl}/functions/v1/delete-account`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token ?? ''}` },
+      });
+      if (!res.ok) return { error: 'Could not delete account. Please try again.' };
+    } catch {
+      return { error: 'Could not delete account. Please try again.' };
+    }
+    await supabase.auth.signOut();
+    setProfile(null);
+    await persistLocal(null);
+    return {};
+  }, [persistLocal]);
+
   const value = useMemo<AuthState>(
     () => ({
       loading,
@@ -216,8 +267,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       enterDemo,
       saveOnboarding,
       setPushToken,
+      resetPassword,
+      resendConfirmation,
+      deleteAccount,
     }),
-    [loading, profile, demo, signUp, signIn, signOut, enterDemo, saveOnboarding, setPushToken],
+    [loading, profile, demo, signUp, signIn, signOut, enterDemo, saveOnboarding, setPushToken, resetPassword, resendConfirmation, deleteAccount],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

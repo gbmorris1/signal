@@ -61,6 +61,19 @@ function asDepth(v: unknown): Depth {
   return v === 'shallow' || v === 'deep' ? v : 'standard';
 }
 
+// Server-authoritative tier → allowed depth + daily analysis cap. The client
+// cannot exceed these by sending a bigger `depth` or resetting a local counter.
+type Tier = 'free' | 'pro' | 'trader';
+const TIER_LIMITS: Record<Tier, { depth: Depth; daily: number }> = {
+  free: { depth: 'shallow', daily: 1 },
+  pro: { depth: 'standard', daily: 25 },
+  trader: { depth: 'deep', daily: 100000 },
+};
+const DEPTH_RANK: Record<Depth, number> = { shallow: 0, standard: 1, deep: 2 };
+function clampDepth(requested: Depth, allowed: Depth): Depth {
+  return DEPTH_RANK[requested] <= DEPTH_RANK[allowed] ? requested : allowed;
+}
+
 interface Market {
   id: string;
   title: string;
@@ -345,6 +358,22 @@ Deno.serve(async (req: Request) => {
     return jsonResponse({ error: 'no AI provider key configured' }, 500);
   }
 
+  const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+
+  // ── Authenticate the caller (closes the "anyone with the anon key" hole) ──
+  const token = (req.headers.get('Authorization') ?? '').replace(/^Bearer\s+/i, '');
+  const { data: userData } = await supabase.auth.getUser(token);
+  const user = userData?.user;
+  if (!user) return jsonResponse({ error: 'unauthorized' }, 401);
+
+  // ── Server-authoritative tier (RevenueCat webhook → subscriptions) ──
+  const [{ data: sub }, { data: prof }] = await Promise.all([
+    supabase.from('subscriptions').select('plan, active').eq('user_id', user.id).maybeSingle(),
+    supabase.from('users').select('plan').eq('id', user.id).maybeSingle(),
+  ]);
+  const tier: Tier = ((sub?.active && sub.plan) || prof?.plan || 'free') as Tier;
+  const limits = TIER_LIMITS[tier] ?? TIER_LIMITS.free;
+
   let market: Market;
   let history: Snapshot[] | undefined;
   let depth: Depth = 'standard';
@@ -352,13 +381,12 @@ Deno.serve(async (req: Request) => {
     const body = await req.json();
     market = body.market;
     history = Array.isArray(body.history) ? body.history : undefined;
-    depth = asDepth(body.depth);
+    depth = clampDepth(asDepth(body.depth), limits.depth); // never deeper than tier
     if (!market?.id || !market?.title) throw new Error('missing market');
   } catch {
     return jsonResponse({ error: 'invalid body' }, 400);
   }
 
-  const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
   const hash = snapshotHash(market, depth);
 
   // 1) Cache hit?
@@ -370,6 +398,7 @@ Deno.serve(async (req: Request) => {
     .maybeSingle();
 
   if (cached) {
+    // Cache hits are free — no model call, so they don't spend quota.
     return jsonResponse({
       edge: cached.edge ?? '',
       summary: cached.summary,
@@ -381,10 +410,33 @@ Deno.serve(async (req: Request) => {
       confidence: cached.confidence,
       ai_probability_estimate: cached.ai_probability_estimate,
       sources: cached.sources ?? [],
+      tier,
     });
   }
 
-  // 2) Retrieve news context (depth-gated), then generate.
+  // 2) Enforce the server-side daily quota BEFORE spending any model/search cost.
+  const { data: usage } = await supabase
+    .from('ai_usage')
+    .select('count')
+    .eq('user_id', user.id)
+    .eq('day', new Date().toISOString().slice(0, 10))
+    .maybeSingle();
+  if ((usage?.count ?? 0) >= limits.daily) {
+    // Over limit → return a teaser from any cached analysis for this market
+    // (never a fresh model call), plus the upgrade signal.
+    const { data: any } = await supabase
+      .from('ai_analysis')
+      .select('edge, summary')
+      .eq('market_id', market.id)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    const teaserSrc = (any?.edge || any?.summary || '').trim();
+    const teaser = teaserSrc ? teaserSrc.split(/(?<=[.!?])\s/)[0] : '';
+    return jsonResponse({ gated: true, tier, daily: limits.daily, teaser }, 200);
+  }
+
+  // 3) Retrieve news context (depth-gated), then generate.
   const sources = await fetchContext(market, depth);
 
   let text: string;
@@ -438,9 +490,13 @@ Deno.serve(async (req: Request) => {
     { onConflict: 'market_id,snapshot_hash' },
   );
 
+  // 4) Charge the user's daily quota (only a real generation counts).
+  const { error: usageErr } = await supabase.rpc('increment_ai_usage', { p_user: user.id });
+
   if (readErr) console.error('cache read error:', readErr.message);
   if (marketErr) console.error('market upsert error:', marketErr.message);
   if (writeErr) console.error('analysis upsert error:', writeErr.message);
+  if (usageErr) console.error('usage increment error:', usageErr.message);
 
-  return jsonResponse({ ...parsed, sources: publicSources });
+  return jsonResponse({ ...parsed, sources: publicSources, tier });
 });

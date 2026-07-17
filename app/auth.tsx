@@ -24,14 +24,27 @@ const VALUE_PROPS: { icon: keyof typeof Ionicons.glyphMap; text: string }[] = [
 const TAGLINE = 'The AI research terminal for prediction markets';
 
 export default function AuthScreen() {
-  const { signIn, signUp, enterDemo } = useAuth();
+  const { signIn, signUp, enterDemo, resetPassword, resendConfirmation } = useAuth();
   const [mode, setMode] = useState<'signin' | 'signup'>('signup');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [sentTo, setSentTo] = useState<string | null>(null);
+
+  async function handleForgot() {
+    setError(null);
+    setNotice(null);
+    if (!email.includes('@')) {
+      setError('Enter your email above first, then tap Forgot password.');
+      return;
+    }
+    const res = await resetPassword(email);
+    if (res.error) setError(res.error);
+    else setNotice('If an account exists for that email, a reset link is on its way.');
+  }
 
   async function submit() {
     setError(null);
@@ -70,6 +83,16 @@ export default function AuthScreen() {
           >
             <Text style={styles.primaryText}>Back to sign in</Text>
           </Pressable>
+          <Pressable
+            style={styles.forgotBtn}
+            onPress={async () => {
+              await resendConfirmation(sentTo);
+              setNotice('Confirmation email resent.');
+            }}
+          >
+            <Text style={styles.forgotText}>Didn't get it? Resend email</Text>
+          </Pressable>
+          {notice && <Text style={styles.notice}>{notice}</Text>}
         </View>
       </SafeAreaView>
     );
@@ -151,12 +174,19 @@ export default function AuthScreen() {
           </View>
 
           {error && <Text style={styles.error}>{error}</Text>}
+          {notice && <Text style={styles.notice}>{notice}</Text>}
 
           <Pressable style={styles.primary} onPress={submit} disabled={busy}>
             <Text style={styles.primaryText}>
               {busy ? 'Please wait…' : mode === 'signup' ? 'Create free account' : 'Sign in'}
             </Text>
           </Pressable>
+
+          {mode === 'signin' && (
+            <Pressable style={styles.forgotBtn} onPress={handleForgot}>
+              <Text style={styles.forgotText}>Forgot password?</Text>
+            </Pressable>
+          )}
 
           <View style={styles.dividerRow}>
             <View style={styles.divider} />
@@ -238,6 +268,9 @@ const styles = StyleSheet.create({
   },
   input: { flex: 1, paddingVertical: 14, color: colors.text, ...typography.body },
   error: { color: colors.down, ...typography.caption },
+  notice: { color: colors.up, ...typography.caption },
+  forgotBtn: { alignItems: 'center', paddingVertical: spacing.xs },
+  forgotText: { color: colors.accent, fontWeight: '600', fontSize: 13 },
   primary: { ...buttonPrimary, marginTop: spacing.xs },
   primaryText: { color: colors.bg, fontWeight: '700', fontSize: 15 },
   dividerRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, marginVertical: spacing.xs },

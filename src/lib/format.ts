@@ -20,16 +20,22 @@ export function scoreLabel(score: number | null): string {
   return String(Math.round(score));
 }
 
-/** Public web URL for a market on its home platform. */
-export function platformUrl(market: {
-  platform: 'polymarket' | 'kalshi';
-  externalId: string;
-  historyRef?: string;
-}): string {
+/**
+ * Public web URL for a market on its home platform, routed by region.
+ * US users go to the CFTC-regulated US venues (Kalshi is US-regulated;
+ * Polymarket's US entity lives at polymarket.us); international users go to
+ * the main sites. Pass the device region ('US', 'GB', …) from expo-localization.
+ */
+export function platformUrl(
+  market: { platform: 'polymarket' | 'kalshi'; externalId: string; historyRef?: string },
+  region?: string | null,
+): string {
+  const isUS = (region ?? '').toUpperCase() === 'US';
   if (market.platform === 'polymarket') {
-    return `https://polymarket.com/market/${market.externalId}`;
+    const host = isUS ? 'https://polymarket.us' : 'https://polymarket.com';
+    return `${host}/market/${market.externalId}`;
   }
-  // Kalshi: link to the series page (stable public URL).
+  // Kalshi is US-regulated; the same site serves both, linked to the series page.
   const series = market.historyRef?.split('/')[0] ?? market.externalId.split('-')[0];
   return `https://kalshi.com/markets/${series.toLowerCase()}`;
 }

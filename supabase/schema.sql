@@ -117,6 +117,26 @@ create table if not exists events (
 );
 create index if not exists events_name_time_idx on events(name, created_at desc);
 
+-- ── ai_usage (server-side daily quota — the real enforcement) ───────────────
+create table if not exists ai_usage (
+  user_id uuid not null references users(id) on delete cascade,
+  day     date not null default current_date,
+  count   int  not null default 0,
+  primary key (user_id, day)
+);
+
+-- Atomic per-user daily increment; returns the new count. security definer so
+-- the Edge Function (service role) can call it; not exposed to anon.
+create or replace function increment_ai_usage(p_user uuid)
+returns int language plpgsql security definer as $$
+declare c int;
+begin
+  insert into ai_usage(user_id, day, count) values (p_user, current_date, 1)
+  on conflict (user_id, day) do update set count = ai_usage.count + 1
+  returning count into c;
+  return c;
+end $$;
+
 -- ── Row Level Security ──────────────────────────────────────────────────────
 alter table users         enable row level security;
 alter table watchlists    enable row level security;
@@ -126,6 +146,7 @@ alter table subscriptions enable row level security;
 alter table markets          enable row level security;
 alter table market_snapshots enable row level security;
 alter table ai_analysis      enable row level security;
+alter table ai_usage         enable row level security;
 
 create policy "own profile"        on users         for all    using (auth.uid() = id) with check (auth.uid() = id);
 create policy "own watchlist"      on watchlists    for all    using (auth.uid() = user_id) with check (auth.uid() = user_id);
@@ -137,4 +158,11 @@ create policy "events insertable" on events for insert with check (true);
 
 create policy "markets readable"   on markets          for select using (true);
 create policy "snapshots readable" on market_snapshots for select using (true);
-create policy "analysis readable"  on ai_analysis      for select using (true);
+-- ai_analysis is the PAID product: no client read policy. Only the service-role
+-- Edge Function reads/writes it; clients receive analysis through the function,
+-- which enforces auth + tier + daily quota. (Previously world-readable — that
+-- let anyone pull every paid analysis with the public anon key.)
+create policy "own ai usage" on ai_usage for select using (auth.uid() = user_id);
+
+-- MIGRATION for an existing project — remove the old public read on ai_analysis:
+--   drop policy if exists "analysis readable" on ai_analysis;

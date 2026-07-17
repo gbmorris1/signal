@@ -15,6 +15,8 @@ export interface SubscriptionService {
   purchase(tier: Exclude<PlanTier, 'free'>): Promise<PlanTier>;
   /** Restore prior purchases. */
   restore(): Promise<PlanTier>;
+  /** Tie the store identity to the app's user id (so the RC webhook maps to it). */
+  identify?(appUserId: string): Promise<void>;
 }
 
 /**

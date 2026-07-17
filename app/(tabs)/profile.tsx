@@ -7,6 +7,7 @@ import { PLANS } from '@/data/subscriptions';
 import { useAuth } from '@/state/auth';
 import { useEntitlement } from '@/state/entitlement';
 import { getNotificationService } from '@/services/notifications';
+import { LEGAL, openManageSubscriptions, openUrl } from '@/lib/legal';
 
 const LEVEL_LABEL: Record<string, string> = {
   beginner: 'Beginner',
@@ -15,7 +16,7 @@ const LEVEL_LABEL: Record<string, string> = {
 };
 
 export default function ProfileScreen() {
-  const { profile, demo, signOut, setPushToken } = useAuth();
+  const { profile, demo, signOut, setPushToken, deleteAccount } = useAuth();
   const { tier } = useEntitlement();
   const [pushStatus, setPushStatus] = useState<string | null>(null);
 
@@ -87,7 +88,7 @@ export default function ProfileScreen() {
               : `${plan?.priceLabel}. Manage or switch plans anytime.`
           }
           action={tier === 'free' ? 'Upgrade' : 'Manage'}
-          onPress={() => router.push('/paywall')}
+          onPress={() => (tier === 'free' ? router.push('/paywall') : openManageSubscriptions())}
         />
       </View>
 
@@ -137,18 +138,49 @@ export default function ProfileScreen() {
         />
       </View>
 
+      {/* Legal */}
+      <Text style={styles.section}>LEGAL</Text>
+      <View style={styles.card}>
+        <Row icon="shield-checkmark-outline" title="Privacy policy" onPress={() => openUrl(LEGAL.privacyUrl)} />
+        <View style={styles.divider} />
+        <Row icon="document-text-outline" title="Terms of service" onPress={() => openUrl(LEGAL.termsUrl)} />
+      </View>
+
       {/* Account */}
       <Text style={styles.section}>ACCOUNT</Text>
       <View style={styles.card}>
         <Row
           icon="log-out-outline"
           title="Sign out"
-          destructive
           onPress={() =>
             RNAlert.alert('Sign out', 'Are you sure?', [
               { text: 'Cancel', style: 'cancel' },
               { text: 'Sign out', style: 'destructive', onPress: () => void signOut() },
             ])
+          }
+        />
+        <View style={styles.divider} />
+        <Row
+          icon="trash-outline"
+          title="Delete account"
+          sub="Permanently erases your account and all data."
+          destructive
+          onPress={() =>
+            RNAlert.alert(
+              'Delete account',
+              'This permanently deletes your account, watchlist, and history. This cannot be undone.',
+              [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                  text: 'Delete',
+                  style: 'destructive',
+                  onPress: async () => {
+                    const res = await deleteAccount();
+                    if (res.error) RNAlert.alert('Could not delete', res.error);
+                  },
+                },
+              ],
+            )
           }
         />
       </View>

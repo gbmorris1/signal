@@ -42,11 +42,22 @@ function fallbackAnalysis(market: Market): AIAnalysis {
  */
 export type AnalysisDepth = 'shallow' | 'standard' | 'deep';
 
+/** Server said the user is over their daily quota; carries an upsell teaser. */
+export interface GatedResult {
+  gated: true;
+  teaser: string;
+}
+export type AnalysisResult = AIAnalysis | GatedResult;
+
+export function isGated(r: AnalysisResult): r is GatedResult {
+  return (r as GatedResult).gated === true;
+}
+
 export async function generateAnalysis(
   market: Market,
   history: MarketSnapshot[],
   depth: AnalysisDepth = 'standard',
-): Promise<AIAnalysis> {
+): Promise<AnalysisResult> {
   const key = `${snapshotHash(market, history)}:${depth}`;
   const hit = cache.get(key);
   if (hit) return hit;
@@ -56,12 +67,24 @@ export async function generateAnalysis(
     result = fallbackAnalysis(market);
   } else {
     try {
+      // Authenticate as the signed-in user so the function can enforce their
+      // real tier + daily quota server-side.
+      const { getSupabase } = await import('@/lib/supabase');
+      const supabase = getSupabase();
+      const token = (await supabase?.auth.getSession())?.data.session?.access_token;
       const res = await fetch(`${supabaseUrl}/functions/v1/analyze-market`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
         body: JSON.stringify({ market, history, depth }),
       });
       const json = await res.json();
+      if (json?.gated) {
+        // Server-enforced limit hit — surface the teaser, don't cache.
+        return { gated: true, teaser: String(json.teaser ?? '') };
+      }
       const parsed = parseAIAnalysis(json);
       result = {
         marketId: market.id,

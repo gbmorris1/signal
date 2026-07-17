@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import {
+  Alert as RNAlert,
   Linking,
   Pressable,
   ScrollView,
@@ -10,11 +11,12 @@ import {
 } from 'react-native';
 import { router, useLocalSearchParams, Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { getLocales } from 'expo-localization';
 import { useQuery } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
 import { colors, radius, spacing, typography, card, shadows, buttonPrimary } from '@/theme';
 import { getMarketSource, getCombinedSource } from '@/services/markets';
-import { generateAnalysis, fetchCachedAnalysis, firstSentence } from '@/services/ai';
+import { generateAnalysis, isGated } from '@/services/ai';
 import { track } from '@/lib/analytics';
 import { ProbabilityChart } from '@/components/ProbabilityChart';
 import { ScoreExplainer } from '@/components/ScoreExplainer';
@@ -24,7 +26,6 @@ import { Enter } from '@/components/motion';
 import { SignalChip, PlatformBadge } from '@/components/Chip';
 import { useWatchlist } from '@/state/watchlist';
 import { useEntitlement } from '@/state/entitlement';
-import { getAiUsageToday, incrementAiUsage } from '@/state/usage';
 import { pct, signedPct, compactUsd, platformUrl } from '@/lib/format';
 import type { AIAnalysis, Confidence, Market, MarketHistory } from '@/types';
 
@@ -90,27 +91,24 @@ export default function MarketDetailScreen() {
   async function runAnalysis() {
     if (!market) return;
     track('explain_click', { market_id: market.id, tier: entitlements.tier });
-    const used = await getAiUsageToday();
-    if (used >= entitlements.dailyAiAnalyses) {
-      setGated(true);
-      track('gated_impression', { market_id: market.id, tier: entitlements.tier });
-      // Teaser comes from the shared cache only, never a fresh model call.
-      const cached = await fetchCachedAnalysis(market.id);
-      if (cached) setTeaser(firstSentence(cached.edge || cached.summary));
-      return;
-    }
     setLoadingAI(true);
     try {
-      // Depth follows the tier: free=shallow, pro=standard, trader=deep.
+      // Depth follows the tier; the SERVER enforces the real tier + daily quota
+      // and returns a gated teaser when the user is over their limit.
       const result = await generateAnalysis(market, snapshots, entitlements.aiDepth);
-      await incrementAiUsage();
-      setAnalysis(result);
-      track('analysis_viewed', {
-        market_id: market.id,
-        tier: entitlements.tier,
-        depth: entitlements.aiDepth,
-      });
-      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      if (isGated(result)) {
+        setGated(true);
+        setTeaser(result.teaser);
+        track('gated_impression', { market_id: market.id, tier: entitlements.tier });
+      } else {
+        setAnalysis(result);
+        track('analysis_viewed', {
+          market_id: market.id,
+          tier: entitlements.tier,
+          depth: entitlements.aiDepth,
+        });
+        void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      }
     } finally {
       setLoadingAI(false);
     }
@@ -122,6 +120,29 @@ export default function MarketDetailScreen() {
       saved ? Haptics.ImpactFeedbackStyle.Light : Haptics.ImpactFeedbackStyle.Medium,
     );
     toggle(market);
+  }
+
+  function openOnPlatform() {
+    if (!market) return;
+    const region = getLocales()[0]?.regionCode ?? null;
+    const url = platformUrl(market, region);
+    const name = market.platform === 'polymarket' ? 'Polymarket' : 'Kalshi';
+    // Interstitial: ODDIQ is research-only; leaving to a third-party trading
+    // venue is an explicit, user-initiated choice.
+    RNAlert.alert(
+      `Leave ODDIQ for ${name}?`,
+      `${name} is a separate third-party trading platform. ODDIQ is research and analysis only and does not place trades. You'll continue on ${name}'s site, subject to their terms and your local eligibility.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: `Continue to ${name}`,
+          onPress: () => {
+            track('external_open', { market_id: market.id, platform: market.platform, region });
+            void Linking.openURL(url);
+          },
+        },
+      ],
+    );
   }
 
   return (
@@ -238,10 +259,7 @@ export default function MarketDetailScreen() {
               borderColor: platformColor(market.platform),
             },
           ]}
-          onPress={() => {
-            track('external_open', { market_id: market.id, platform: market.platform });
-            void Linking.openURL(platformUrl(market));
-          }}
+          onPress={openOnPlatform}
         >
           <View style={[styles.brandGlyph, { backgroundColor: platformColor(market.platform) }]}>
             <Text style={styles.brandGlyphText}>{market.platform === 'polymarket' ? 'P' : 'K'}</Text>

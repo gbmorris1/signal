@@ -65,6 +65,48 @@ alter table ai_analysis add column if not exists sources jsonb not null default 
 
 ---
 
+## Production hardening (run before beta)
+
+**1. Lock the paid product + add server-side quota** (SQL editor):
+```sql
+-- Stop the world from reading paid analyses with the public anon key
+drop policy if exists "analysis readable" on ai_analysis;
+
+-- Server-side daily quota table + atomic increment
+create table if not exists ai_usage (
+  user_id uuid not null references users(id) on delete cascade,
+  day date not null default current_date,
+  count int not null default 0,
+  primary key (user_id, day)
+);
+alter table ai_usage enable row level security;
+create policy "own ai usage" on ai_usage for select using (auth.uid() = user_id);
+create or replace function increment_ai_usage(p_user uuid) returns int
+language plpgsql security definer as $$
+declare c int; begin
+  insert into ai_usage(user_id, day, count) values (p_user, current_date, 1)
+  on conflict (user_id, day) do update set count = ai_usage.count + 1
+  returning count into c; return c; end $$;
+```
+
+**2. Deploy the new Edge Functions:**
+```bash
+npx supabase functions deploy analyze-market       # now auth + tier + quota enforced
+npx supabase functions deploy delete-account       # App Store account deletion
+npx supabase functions deploy revenuecat-webhook --no-verify-jwt
+npx supabase secrets set RC_WEBHOOK_SECRET=<random>
+```
+
+**3. RevenueCat dashboard → Integrations → Webhooks:**
+- URL: `https://aanhvekseyfsecezxgne.supabase.co/functions/v1/revenuecat-webhook`
+- Authorization header value: the same `RC_WEBHOOK_SECRET`
+- Entitlement identifiers must be `signal_pro` / `signal_trader`; configure the **3-day intro trial** on the offering (or the paywall copy is inaccurate → App Store rejection).
+
+**4. Host legal pages** and update the URLs in `src/lib/legal.ts`:
+`oddiq.ai/privacy`, `oddiq.ai/terms`. Apple requires reachable Privacy Policy + Terms links (they're wired into the paywall and Profile).
+
+---
+
 ## 3. Live Polymarket data — no key needed
 
 **What it unlocks:** real markets instead of the 6 mock ones.
