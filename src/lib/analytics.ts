@@ -4,6 +4,9 @@ import { getSupabase } from '@/lib/supabase';
 // No vendor, queryable in SQL. No-ops (console.log in dev) without Supabase.
 
 export type FunnelEvent =
+  | 'signup_completed'
+  | 'market_viewed'
+  | 'watchlist_add'
   | 'explain_click'
   | 'gated_impression'
   | 'analysis_viewed'

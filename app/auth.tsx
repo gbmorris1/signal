@@ -3,6 +3,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   Pressable,
+  ScrollView,
   Text,
   TextInput,
   View,
@@ -13,6 +14,8 @@ import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, radius, spacing, typography, buttonPrimary, shadows } from '@/theme';
 import { BrandMark } from '@/components/BrandMark';
+import { ExampleEdge } from '@/components/ExampleEdge';
+import { track } from '@/lib/analytics';
 import { useAuth, hasSupabase } from '@/state/auth';
 
 const VALUE_PROPS: { icon: keyof typeof Ionicons.glyphMap; text: string }[] = [
@@ -57,8 +60,9 @@ export default function AuthScreen() {
     setBusy(false);
     if (res.error) {
       setError(res.error);
-    } else if (mode === 'signup' && 'needsConfirmation' in res && res.needsConfirmation) {
-      setSentTo(email);
+    } else if (mode === 'signup') {
+      track('signup_completed', {});
+      if ('needsConfirmation' in res && res.needsConfirmation) setSentTo(email);
     }
   }
 
@@ -102,26 +106,33 @@ export default function AuthScreen() {
     <SafeAreaView style={styles.safe}>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        style={styles.container}
+        style={{ flex: 1 }}
       >
-        <View style={styles.brand}>
-          <View style={styles.mark}>
-            <BrandMark size={44} />
-          </View>
-          <Text style={styles.logo}>ODDIQ</Text>
-          <Text style={styles.tagline}>{TAGLINE}</Text>
-        </View>
-
-        <View style={styles.props}>
-          {VALUE_PROPS.map((p) => (
-            <View key={p.icon} style={styles.propRow}>
-              <Ionicons name={p.icon} size={15} color={colors.accent} />
-              <Text style={styles.propText}>{p.text}</Text>
+        <ScrollView
+          contentContainerStyle={styles.container}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.brand}>
+            <View style={styles.mark}>
+              <BrandMark size={44} />
             </View>
-          ))}
-        </View>
+            <Text style={styles.logo}>ODDIQ</Text>
+            <Text style={styles.tagline}>{TAGLINE}</Text>
+          </View>
 
-        <View style={styles.form}>
+          <View style={styles.props}>
+            {VALUE_PROPS.map((p) => (
+              <View key={p.icon} style={styles.propRow}>
+                <Ionicons name={p.icon} size={15} color={colors.accent} />
+                <Text style={styles.propText}>{p.text}</Text>
+              </View>
+            ))}
+          </View>
+
+          <ExampleEdge />
+
+          <View style={styles.form}>
           <View style={styles.segment}>
             <Pressable
               onPress={() => setMode('signup')}
@@ -210,7 +221,8 @@ export default function AuthScreen() {
               Dev mode: accounts are stored locally (no Supabase keys configured).
             </Text>
           )}
-        </View>
+          </View>
+        </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -218,7 +230,7 @@ export default function AuthScreen() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.bg },
-  container: { flex: 1, padding: spacing.xl, justifyContent: 'center' },
+  container: { flexGrow: 1, padding: spacing.xl, justifyContent: 'center', gap: spacing.lg },
   brand: { alignItems: 'center', marginBottom: spacing.xl },
   mark: {
     width: 64,

@@ -490,7 +490,25 @@ Deno.serve(async (req: Request) => {
     { onConflict: 'market_id,snapshot_hash' },
   );
 
-  // 4) Charge the user's daily quota (only a real generation counts).
+  // 4) Log the prediction for the track record (only real generations, and
+  //    only when the model gave a usable probability estimate).
+  const est = typeof parsed.ai_probability_estimate === 'number' ? parsed.ai_probability_estimate : null;
+  if (est != null) {
+    const gap = est - market.probability;
+    const direction = gap > 0.03 ? 'higher' : gap < -0.03 ? 'lower' : 'inline';
+    await supabase.from('ai_predictions').insert({
+      market_id: market.id,
+      title: market.title,
+      category: market.category,
+      ai_probability: est,
+      market_probability: market.probability,
+      edge_gap: gap,
+      direction,
+      depth,
+    });
+  }
+
+  // 5) Charge the user's daily quota (only a real generation counts).
   const { error: usageErr } = await supabase.rpc('increment_ai_usage', { p_user: user.id });
 
   if (readErr) console.error('cache read error:', readErr.message);

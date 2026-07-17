@@ -1,6 +1,7 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   Alert as RNAlert,
+  Animated,
   Linking,
   Pressable,
   ScrollView,
@@ -62,6 +63,12 @@ export default function MarketDetailScreen() {
     queryFn: () => source.getHistory(marketId),
   });
   const snapshots = history?.snapshots ?? [];
+
+  // Funnel: market viewed (first view per user is MIN(created_at) in SQL).
+  useEffect(() => {
+    if (marketId) track('market_viewed', { market_id: marketId });
+  }, [marketId]);
+
   // Cross-platform comparison (live mode only; [] in mock/demo).
   const { data: comparables = [] } = useQuery<Market[]>({
     queryKey: ['comparables', marketId],
@@ -119,6 +126,7 @@ export default function MarketDetailScreen() {
     void Haptics.impactAsync(
       saved ? Haptics.ImpactFeedbackStyle.Light : Haptics.ImpactFeedbackStyle.Medium,
     );
+    if (!saved) track('watchlist_add', { market_id: market.id });
     toggle(market);
   }
 
@@ -305,10 +313,12 @@ export default function MarketDetailScreen() {
             <Text style={styles.explainText}>Try Pro free for 3 days</Text>
           </Pressable>
         </View>
+      ) : loadingAI ? (
+        <AnalysisSkeleton tier={entitlements.tier} />
       ) : !analysis ? (
-        <Pressable style={styles.explainBtn} onPress={runAnalysis} disabled={loadingAI}>
+        <Pressable style={styles.explainBtn} onPress={runAnalysis}>
           <Ionicons name="sparkles" size={15} color={colors.bg} />
-          <Text style={styles.explainText}>{loadingAI ? 'Analyzing…' : 'Explain this move'}</Text>
+          <Text style={styles.explainText}>Explain this move</Text>
         </Pressable>
       ) : (
         <Enter>
@@ -318,6 +328,43 @@ export default function MarketDetailScreen() {
 
       <ScoreExplainer market={market} visible={showScore} onClose={() => setShowScore(false)} />
     </ScrollView>
+  );
+}
+
+/** Animated placeholder while the model runs — reads as "working", not frozen. */
+function AnalysisSkeleton({ tier }: { tier: string }) {
+  const pulse = useMemo(() => new Animated.Value(0.4), []);
+  useEffect(() => {
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulse, { toValue: 1, duration: 700, useNativeDriver: true }),
+        Animated.timing(pulse, { toValue: 0.4, duration: 700, useNativeDriver: true }),
+      ]),
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [pulse]);
+
+  const steps =
+    tier === 'trader'
+      ? 'Reading ~8 sources and pricing the edge…'
+      : tier === 'pro'
+        ? 'Reading the latest news and forming a view…'
+        : 'Analyzing the move…';
+
+  return (
+    <View style={{ gap: spacing.md }}>
+      <View style={[styles.card, styles.edgeCard]}>
+        <View style={styles.edgeHead}>
+          <Ionicons name="flash" size={15} color={colors.accent} />
+          <Text style={styles.edgeLabel}>ODDIQ'S EDGE</Text>
+        </View>
+        <Animated.View style={[styles.bone, { width: '95%', opacity: pulse }]} />
+        <Animated.View style={[styles.bone, { width: '88%', opacity: pulse }]} />
+        <Animated.View style={[styles.bone, { width: '60%', opacity: pulse }]} />
+      </View>
+      <Text style={styles.skeletonStatus}>{steps}</Text>
+    </View>
   );
 }
 
@@ -515,6 +562,8 @@ const styles = StyleSheet.create({
   },
   gateTitle: { ...typography.heading, color: colors.text },
   edgeCard: { borderColor: colors.accent, backgroundColor: colors.accentDim, gap: spacing.sm },
+  bone: { height: 12, borderRadius: 6, backgroundColor: colors.accent },
+  skeletonStatus: { ...typography.caption, color: colors.accent, textAlign: 'center' },
   edgeHead: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
   edgeLabel: { ...typography.kicker, color: colors.accent },
   edgeBody: { ...typography.body, color: colors.text, lineHeight: 22 },

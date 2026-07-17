@@ -105,6 +105,23 @@ npx supabase secrets set RC_WEBHOOK_SECRET=<random>
 **4. Host legal pages** and update the URLs in `src/lib/legal.ts`:
 `oddiq.ai/privacy`, `oddiq.ai/terms`. Apple requires reachable Privacy Policy + Terms links (they're wired into the paywall and Profile).
 
+**5. Track record (the moat).** Add the tables/view (SQL editor):
+```sql
+-- run the ai_predictions + track_record + ai_usage blocks from schema.sql,
+-- or the whole schema.sql if starting fresh
+```
+Then deploy the resolver and schedule it daily:
+```bash
+npx supabase functions deploy resolve-predictions --no-verify-jwt
+```
+```sql
+select cron.schedule('resolve-predictions','17 3 * * *', $$
+  select net.http_post(
+    url:='https://aanhvekseyfsecezxgne.supabase.co/functions/v1/resolve-predictions',
+    headers:='{"x-cron-secret":"YOUR_CRON_SECRET"}'::jsonb) $$);
+```
+Every real AI analysis now logs ODDIQ's probability vs the market's; the resolver scores them as markets settle. Read the rolling record from the `track_record` view — the app shows it (in the pre-signup sample + wherever surfaced) once ≥20 predictions have resolved.
+
 ---
 
 ## 3. Live Polymarket data — no key needed

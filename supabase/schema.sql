@@ -117,6 +117,41 @@ create table if not exists events (
 );
 create index if not exists events_name_time_idx on events(name, created_at desc);
 
+-- ── ai_predictions (the track record — ODDIQ's moat) ────────────────────────
+-- Every generated analysis logs the model's probability vs the market's at that
+-- moment. When the market resolves, we score whether ODDIQ beat the market.
+create table if not exists ai_predictions (
+  id                  bigserial primary key,
+  market_id           text not null references markets(id) on delete cascade,
+  title               text not null,
+  category            category,
+  ai_probability      numeric not null,   -- ODDIQ's estimate, 0..1
+  market_probability  numeric not null,   -- market implied at prediction time
+  edge_gap            numeric not null,   -- ai - market (signed)
+  direction           text not null,      -- 'higher' | 'lower' | 'inline'
+  depth               text not null,
+  created_at          timestamptz not null default now(),
+  -- resolution (filled by resolve-predictions once the market settles)
+  resolved            boolean not null default false,
+  outcome             numeric,            -- 1 = YES occurred, 0 = NO
+  resolved_at         timestamptz,
+  ai_correct          boolean,            -- was ODDIQ closer to truth than the market?
+  ai_brier            numeric,            -- (ai_probability - outcome)^2  (lower = better)
+  market_brier        numeric             -- (market_probability - outcome)^2
+);
+create index if not exists predictions_unresolved_idx on ai_predictions(resolved) where resolved = false;
+create index if not exists predictions_market_idx on ai_predictions(market_id);
+
+-- Rolling accuracy: how often ODDIQ's estimate beat the market's, and the
+-- Brier-score edge (positive = ODDIQ more accurate). Public read (it's the pitch).
+create or replace view track_record as
+select
+  count(*)                                             as resolved_predictions,
+  round(avg(case when ai_correct then 1 else 0 end) * 100, 1) as beat_market_pct,
+  round(avg(market_brier - ai_brier)::numeric, 4)      as brier_edge
+from ai_predictions
+where resolved = true;
+
 -- ── ai_usage (server-side daily quota — the real enforcement) ───────────────
 create table if not exists ai_usage (
   user_id uuid not null references users(id) on delete cascade,
@@ -147,6 +182,10 @@ alter table markets          enable row level security;
 alter table market_snapshots enable row level security;
 alter table ai_analysis      enable row level security;
 alter table ai_usage         enable row level security;
+alter table ai_predictions   enable row level security;
+-- No client policy on ai_predictions: only the service-role functions read/write
+-- rows. The aggregate track_record view is exposed instead.
+grant select on track_record to anon, authenticated;
 
 create policy "own profile"        on users         for all    using (auth.uid() = id) with check (auth.uid() = id);
 create policy "own watchlist"      on watchlists    for all    using (auth.uid() = user_id) with check (auth.uid() = user_id);
