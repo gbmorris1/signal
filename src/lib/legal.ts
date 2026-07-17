@@ -1,12 +1,11 @@
 import { Linking, Platform } from 'react-native';
 
-// Legal + store URLs. The source pages live in /legal (privacy.html, terms.html).
-// Host them anywhere public (GitHub Pages, Netlify, your domain) and set the
-// live URLs here — Apple requires reachable Privacy Policy and Terms links.
-// Placeholders below assume you publish at oddiq.ai; change to your real host.
+// Legal + store URLs. Source pages live in /legal, published via GitHub Pages.
+// Operator: Gains Academy LLC (Arizona). Swap to a custom oddiq.ai domain later
+// by updating these two URLs.
 export const LEGAL = {
-  privacyUrl: 'https://oddiq.ai/privacy',
-  termsUrl: 'https://oddiq.ai/terms',
+  privacyUrl: 'https://gbmorris1.github.io/signal/legal/privacy.html',
+  termsUrl: 'https://gbmorris1.github.io/signal/legal/terms.html',
   supportUrl: 'mailto:support@oddiq.ai',
 };
 
