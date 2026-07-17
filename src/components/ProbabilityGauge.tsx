@@ -60,5 +60,5 @@ export function ProbabilityGauge({
 
 const styles = StyleSheet.create({
   center: { alignItems: 'center', justifyContent: 'center', paddingTop: 8 },
-  value: { fontSize: 22, fontWeight: '800', fontVariant: ['tabular-nums'], letterSpacing: -0.5 },
+  value: { fontSize: 20, fontWeight: '700', fontVariant: ['tabular-nums'], letterSpacing: -0.4 },
 });

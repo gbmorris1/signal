@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Alert as RNAlert, Pressable, ScrollView, Text, View, StyleSheet } from 'react-native';
 import { router } from 'expo-router';
-import { colors, radius, spacing, typography } from '@/theme';
+import { colors, radius, spacing, typography, card } from '@/theme';
 import { PLANS } from '@/data/subscriptions';
 import { useAuth } from '@/state/auth';
 import { useEntitlement } from '@/state/entitlement';
@@ -121,11 +121,7 @@ const styles = StyleSheet.create({
   content: { padding: spacing.lg, paddingBottom: spacing.xxl, gap: spacing.md },
   title: { ...typography.title, color: colors.text, marginBottom: spacing.sm },
   card: {
-    backgroundColor: colors.surface,
-    borderColor: colors.border,
-    borderWidth: 1,
-    borderRadius: radius.lg,
-    padding: spacing.lg,
+    ...card,
     gap: spacing.sm,
   },
   name: { ...typography.heading, color: colors.text },
@@ -147,11 +143,7 @@ const styles = StyleSheet.create({
   ctaText: { color: colors.bg, fontWeight: '700' },
   status: { ...typography.caption, color: colors.up, marginTop: spacing.xs },
   plan: {
-    backgroundColor: colors.surface,
-    borderColor: colors.border,
-    borderWidth: 1,
-    borderRadius: radius.lg,
-    padding: spacing.lg,
+    ...card,
     gap: 4,
   },
   planHead: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: spacing.xs },

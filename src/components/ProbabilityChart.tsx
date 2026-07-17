@@ -228,6 +228,6 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.xs,
     alignItems: 'center',
   },
-  tooltipProb: { fontSize: 18, fontWeight: '700', fontVariant: ['tabular-nums'] },
+  tooltipProb: { fontSize: 20, fontWeight: '700', fontVariant: ['tabular-nums'] },
   tooltipDate: { fontSize: 11, color: colors.textMuted, marginTop: 1 },
 });

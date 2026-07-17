@@ -1,39 +1,46 @@
-// Signal design tokens — dark, restrained, finance-terminal feel.
-// No raw hex outside this file.
+// Signal design tokens — dark finance-terminal system.
+// Built on the mobile-app-ui-design rules: one font family, 4 type sizes,
+// 2 weights, opacity-driven text hierarchy, 60/30/10 color, 8-pt grid,
+// soft tinted shadows. No raw hex outside this file.
+import type { TextStyle, ViewStyle } from 'react-native';
 
 export const colors = {
-  // surfaces — near-black with a cold cast, layered subtly
+  // 60% — neutral base
   bg: '#0A0B0E',
-  surface: '#121419',
-  surfaceElevated: '#1A1D24',
-  border: '#22252D',
-  borderStrong: '#2E323C',
-  // text
-  text: '#F4F5F7',
-  textMuted: '#9BA1AC',
-  textFaint: '#5D636E',
-  // brand / accent
+  surface: '#14161C',
+  surfaceElevated: '#1B1E26',
+  // hairlines from white opacity so they sit naturally on any surface
+  border: 'rgba(244,246,250,0.08)',
+  borderStrong: 'rgba(244,246,250,0.15)',
+  // 30% — text, hierarchy by opacity (100 / 64 / 40)
+  text: '#F5F6F8',
+  textMuted: 'rgba(245,246,248,0.64)',
+  textFaint: 'rgba(245,246,248,0.40)',
+  // 10% — accent (trust blue) + semantic money colors
   accent: '#4E8DFF',
-  accentDim: '#16233F',
-  // semantics
+  accentDim: 'rgba(78,141,255,0.14)',
   up: '#2FD48C',
-  upDim: '#0F2A20',
+  upDim: 'rgba(47,212,140,0.14)',
   down: '#FF5A6B',
-  downDim: '#331419',
+  downDim: 'rgba(255,90,107,0.14)',
   warn: '#FFB020',
   // signal chips
   signalOpportunity: '#2FD48C',
   signalWatch: '#4E8DFF',
-  signalNeutral: '#9BA1AC',
+  signalNeutral: 'rgba(245,246,248,0.64)',
   signalCaution: '#FFB020',
-  // platform identities — keep these visually distinct everywhere
+  // platform identities — deliberate exception to the accent budget: platform
+  // ownership must be unmissable (user-tested requirement)
   polymarket: '#8B7CFF',
-  polymarketDim: '#1E1A38',
+  polymarketDim: 'rgba(139,124,255,0.14)',
   kalshi: '#00C2A8',
-  kalshiDim: '#0A2622',
+  kalshiDim: 'rgba(0,194,168,0.14)',
 } as const;
 
-/** Per-category accent hues — used for kickers, chips, and section tints. */
+/**
+ * Per-category hues. Used ONLY as small dots/tints, never as text color —
+ * strong color is reserved for money movement and CTAs.
+ */
 export const categoryColors: Record<string, string> = {
   politics: '#FF7A59',
   finance: '#4E8DFF',
@@ -43,6 +50,7 @@ export const categoryColors: Record<string, string> = {
   technology: '#00C2D1',
 };
 
+// 8-pt grid (4 allowed as half-step)
 export const spacing = {
   xs: 4,
   sm: 8,
@@ -50,31 +58,107 @@ export const spacing = {
   lg: 16,
   xl: 24,
   xxl: 32,
+  xxxl: 48,
 } as const;
 
 export const radius = {
   sm: 8,
   md: 12,
-  lg: 18,
+  lg: 20,
   pill: 999,
 } as const;
 
+// ── Typography: ONE family (system), 4 sizes (34/20/15/12), 2 weights (700/400).
+// Hierarchy comes from size + weight + text opacity, not extra variants.
+const W_BOLD = '700' as const;
+const W_REG = '400' as const;
+const TABULAR: TextStyle = { fontVariant: ['tabular-nums'] };
+
 export const typography = {
-  display: { fontSize: 32, fontWeight: '700' as const, letterSpacing: -0.8 },
-  title: { fontSize: 22, fontWeight: '700' as const, letterSpacing: -0.4 },
-  heading: { fontSize: 17, fontWeight: '600' as const, letterSpacing: -0.2 },
-  body: { fontSize: 15, fontWeight: '400' as const },
-  bodyStrong: { fontSize: 15, fontWeight: '600' as const },
-  caption: { fontSize: 13, fontWeight: '400' as const },
-  /** Small-caps section/label treatment. */
+  display: { fontSize: 34, fontWeight: W_BOLD, letterSpacing: -0.8 },
+  title: { fontSize: 20, fontWeight: W_BOLD, letterSpacing: -0.4 },
+  heading: { fontSize: 15, fontWeight: W_BOLD, letterSpacing: -0.2 },
+  body: { fontSize: 15, fontWeight: W_REG },
+  bodyStrong: { fontSize: 15, fontWeight: W_BOLD },
+  caption: { fontSize: 12, fontWeight: W_REG },
+  /** Small-caps label. Same 12px step, bold + tracking does the work. */
   kicker: {
-    fontSize: 11,
-    fontWeight: '700' as const,
-    letterSpacing: 1.2,
+    fontSize: 12,
+    fontWeight: W_BOLD,
+    letterSpacing: 1.1,
     textTransform: 'uppercase' as const,
   },
-  mono: { fontSize: 15, fontWeight: '600' as const, fontVariant: ['tabular-nums'] as ['tabular-nums'] },
+  /** Numbers: same scale, tabular digits. */
+  mono: { fontSize: 15, fontWeight: W_BOLD, ...TABULAR },
+  monoLarge: { fontSize: 20, fontWeight: W_BOLD, letterSpacing: -0.4, ...TABULAR },
+  monoDisplay: { fontSize: 34, fontWeight: W_BOLD, letterSpacing: -0.8, ...TABULAR },
 } as const;
 
-export const theme = { colors, spacing, radius, typography } as const;
+// ── Soft shadows, tinted to the near-black bg (never harsh gray).
+export const shadows: Record<'card' | 'raised' | 'glowAccent' | 'glowUp' | 'glowDown', ViewStyle> = {
+  card: {
+    shadowColor: '#05060A',
+    shadowOpacity: 0.5,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 4,
+  },
+  raised: {
+    shadowColor: '#05060A',
+    shadowOpacity: 0.6,
+    shadowRadius: 20,
+    shadowOffset: { width: 0, height: 10 },
+    elevation: 8,
+  },
+  glowAccent: {
+    shadowColor: '#4E8DFF',
+    shadowOpacity: 0.35,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 0 },
+    elevation: 6,
+  },
+  glowUp: {
+    shadowColor: '#2FD48C',
+    shadowOpacity: 0.3,
+    shadowRadius: 14,
+    shadowOffset: { width: 0, height: 0 },
+    elevation: 6,
+  },
+  glowDown: {
+    shadowColor: '#FF5A6B',
+    shadowOpacity: 0.3,
+    shadowRadius: 14,
+    shadowOffset: { width: 0, height: 0 },
+    elevation: 6,
+  },
+};
+
+/** Primary CTA: accent fill, subtle top highlight (light-source cue), soft shadow. */
+export const buttonPrimary: ViewStyle = {
+  backgroundColor: colors.accent,
+  borderRadius: radius.md,
+  paddingVertical: 14,
+  alignItems: 'center',
+  borderTopWidth: 1,
+  borderTopColor: 'rgba(255,255,255,0.30)',
+  ...({
+    shadowColor: '#4E8DFF',
+    shadowOpacity: 0.35,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 5,
+  } as ViewStyle),
+};
+
+/** Shared card recipe: surface + hairline + soft shadow + grid padding. */
+export const card: ViewStyle = {
+  backgroundColor: colors.surface,
+  borderColor: colors.border,
+  borderWidth: 1,
+  borderRadius: radius.lg,
+  padding: spacing.xl - 4, // 20 — mobile card baseline on the 4-pt half-step
+  ...shadows.card,
+};
+
+export const theme = { colors, spacing, radius, typography, shadows, card } as const;
 export type Theme = typeof theme;

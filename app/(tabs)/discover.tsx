@@ -13,7 +13,7 @@ import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useQuery } from '@tanstack/react-query';
-import { colors, categoryColors, radius, spacing, typography } from '@/theme';
+import { colors, categoryColors, radius, spacing, typography, card } from '@/theme';
 import { getMarketSource } from '@/services/markets';
 import { MarketCard } from '@/components/MarketCard';
 import { PlatformBadge } from '@/components/Chip';
@@ -265,11 +265,7 @@ const styles = StyleSheet.create({
   },
   toggleText: { color: colors.textMuted, fontSize: 13, fontWeight: '600' },
   skeleton: {
-    backgroundColor: colors.surface,
-    borderColor: colors.border,
-    borderWidth: 1,
-    borderRadius: radius.lg,
-    padding: spacing.lg,
+    ...card,
     gap: spacing.sm,
   },
   bone: { height: 10, borderRadius: 5, backgroundColor: colors.surfaceElevated },

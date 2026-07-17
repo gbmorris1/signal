@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
-import { colors, radius, spacing, typography } from '@/theme';
+import { colors, radius, spacing, typography, buttonPrimary } from '@/theme';
 import { useAuth, hasSupabase } from '@/state/auth';
 
 export default function AuthScreen() {
@@ -154,7 +154,7 @@ const styles = StyleSheet.create({
     ...typography.body,
   },
   error: { color: colors.down, ...typography.caption },
-  primary: { backgroundColor: colors.accent, borderRadius: radius.md, paddingVertical: spacing.md, alignItems: 'center', marginTop: spacing.xs },
+  primary: { ...buttonPrimary, marginTop: spacing.xs },
   primaryText: { color: colors.bg, fontWeight: '700', fontSize: 15 },
   secondary: { alignItems: 'center', paddingVertical: spacing.sm },
   secondaryText: { color: colors.accent, fontWeight: '600' },

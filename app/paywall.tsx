@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, Text, View, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
-import { colors, radius, spacing, typography } from '@/theme';
+import { colors, radius, spacing, typography, buttonPrimary } from '@/theme';
 import { PLANS, FEATURE_DETAILS } from '@/data/subscriptions';
 import { useEntitlement } from '@/state/entitlement';
 import { track } from '@/lib/analytics';
@@ -139,7 +139,7 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.xs,
   },
   expandHint: { fontSize: 11, color: colors.accent, marginTop: spacing.xs },
-  buy: { backgroundColor: colors.accent, borderRadius: radius.md, paddingVertical: spacing.md, alignItems: 'center', marginTop: spacing.md },
+  buy: { ...buttonPrimary, marginTop: spacing.md },
   buyOwned: { backgroundColor: colors.surfaceElevated },
   buyText: { color: colors.bg, fontWeight: '700' },
   trialNote: { fontSize: 11, color: colors.textFaint, textAlign: 'center', marginTop: spacing.xs },

@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, Text, View, StyleSheet, useWindowDimensions } from 'react-native';
 import { router, useLocalSearchParams, Stack } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
-import { colors, radius, spacing, typography } from '@/theme';
+import { colors, radius, spacing, typography, card, shadows, buttonPrimary } from '@/theme';
 import { getMarketSource, getCombinedSource } from '@/services/markets';
 import { generateAnalysis, fetchCachedAnalysis, firstSentence } from '@/services/ai';
 import { track } from '@/lib/analytics';
@@ -116,7 +116,7 @@ export default function MarketDetailScreen() {
       </View>
       <Text style={styles.title}>{market.title}</Text>
 
-      <View style={[styles.card, styles.headlineCard]}>
+      <View style={[styles.card, styles.headlineCard, up ? shadows.glowUp : shadows.glowDown]}>
         <ProbabilityGauge probability={market.probability} up={up} />
         <View style={{ flex: 1 }}>
           <OutcomeSplit market={market} size="lg" />
@@ -334,14 +334,10 @@ const styles = StyleSheet.create({
   muted: { color: colors.textMuted },
   title: { ...typography.title, color: colors.text, marginTop: spacing.xs },
   statsRow: { flexDirection: 'row', justifyContent: 'space-between', marginVertical: spacing.sm },
-  statValue: { ...typography.mono, fontSize: 18 },
+  statValue: { ...typography.monoLarge },
   statLabel: { color: colors.textFaint, fontSize: 11, marginTop: 2 },
   chartCard: {
-    backgroundColor: colors.surface,
-    borderColor: colors.border,
-    borderWidth: 1,
-    borderRadius: radius.lg,
-    padding: spacing.lg,
+    ...card,
     gap: spacing.sm,
   },
   headlineCard: { flexDirection: 'row', alignItems: 'center', gap: spacing.lg },
@@ -360,11 +356,7 @@ const styles = StyleSheet.create({
   cardLabel: { ...typography.bodyStrong, color: colors.textMuted },
   cardBody: { ...typography.body, color: colors.text, lineHeight: 21 },
   card: {
-    backgroundColor: colors.surface,
-    borderColor: colors.border,
-    borderWidth: 1,
-    borderRadius: radius.lg,
-    padding: spacing.lg,
+    ...card,
     gap: spacing.xs,
   },
   saveBtn: {
@@ -377,12 +369,7 @@ const styles = StyleSheet.create({
   saveBtnActive: { backgroundColor: colors.accent },
   saveText: { color: colors.accent, fontWeight: '600' },
   section: { ...typography.heading, color: colors.text, marginTop: spacing.sm },
-  explainBtn: {
-    backgroundColor: colors.accent,
-    borderRadius: radius.md,
-    paddingVertical: spacing.md,
-    alignItems: 'center',
-  },
+  explainBtn: { ...buttonPrimary },
   explainText: { color: colors.bg, fontWeight: '700' },
   gateCard: {
     backgroundColor: colors.surface,

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Pressable, ScrollView, Text, View, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { colors, radius, spacing, typography } from '@/theme';
+import { colors, radius, spacing, typography, buttonPrimary } from '@/theme';
 import { useAuth } from '@/state/auth';
 import type { Category, ExperienceLevel } from '@/types';
 
@@ -132,7 +132,7 @@ const styles = StyleSheet.create({
   levelCardOn: { borderColor: colors.accent, backgroundColor: colors.accentDim },
   levelLabel: { ...typography.heading, color: colors.textMuted },
   levelHint: { ...typography.caption, color: colors.textFaint, marginTop: 2 },
-  primary: { backgroundColor: colors.accent, borderRadius: radius.md, paddingVertical: spacing.md, alignItems: 'center', marginTop: spacing.xxl },
+  primary: { ...buttonPrimary, marginTop: spacing.xxl },
   primaryText: { color: colors.bg, fontWeight: '700', fontSize: 15 },
   disabled: { opacity: 0.4 },
   back: { alignItems: 'center', paddingVertical: spacing.md },

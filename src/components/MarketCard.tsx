@@ -1,7 +1,7 @@
 import { useRef } from 'react';
 import { Animated, Pressable, Text, View, StyleSheet } from 'react-native';
 import { router } from 'expo-router';
-import { colors, categoryColors, radius, spacing, typography } from '@/theme';
+import { colors, categoryColors, radius, spacing, typography, card } from '@/theme';
 import { pct, signedPct, compactUsd } from '@/lib/format';
 import { SignalChip, PlatformBadge } from './Chip';
 import { OutcomeSplit } from './OutcomeSplit';
@@ -28,9 +28,10 @@ export function MarketCard({ market, reason }: { market: Market; reason?: string
         <View style={styles.topRow}>
           <View style={styles.metaRow}>
             <PlatformBadge platform={market.platform} />
-            <Text style={[styles.category, { color: categoryColors[market.category] ?? colors.textFaint }]}>
-              {market.category.toUpperCase()}
-            </Text>
+            <View
+              style={[styles.catDot, { backgroundColor: categoryColors[market.category] ?? colors.textFaint }]}
+            />
+            <Text style={styles.category}>{market.category.toUpperCase()}</Text>
           </View>
           <SignalChip signal={market.signal} />
         </View>
@@ -83,17 +84,14 @@ function Stat({ label, value }: { label: string; value: string }) {
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: colors.surface,
-    borderColor: colors.border,
-    borderWidth: 1,
-    borderRadius: radius.lg,
-    padding: spacing.lg,
+    ...card,
     gap: spacing.md,
   },
   cardPressed: { backgroundColor: colors.surfaceElevated, borderColor: colors.borderStrong },
   topRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   metaRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   category: { fontSize: 10, fontWeight: '700', letterSpacing: 1, color: colors.textFaint },
+  catDot: { width: 6, height: 6, borderRadius: 3 },
   title: { ...typography.heading, color: colors.text, lineHeight: 22 },
   reasonRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: -spacing.xs },
   reasonDot: { width: 4, height: 4, borderRadius: 2, backgroundColor: colors.accent },
@@ -105,13 +103,7 @@ const styles = StyleSheet.create({
     marginTop: spacing.xs,
   },
   oddsBlock: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  prob: {
-    fontSize: 28,
-    fontWeight: '700',
-    letterSpacing: -0.5,
-    color: colors.text,
-    fontVariant: ['tabular-nums'],
-  },
+  prob: { ...typography.monoLarge, color: colors.text },
   deltaPill: { borderRadius: radius.pill, paddingHorizontal: spacing.sm, paddingVertical: 3 },
   deltaText: { fontSize: 13, fontWeight: '700', fontVariant: ['tabular-nums'] },
   statBlock: { flexDirection: 'row', gap: spacing.lg },

@@ -4,7 +4,7 @@ import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useQuery } from '@tanstack/react-query';
-import { colors, radius, spacing, typography } from '@/theme';
+import { colors, radius, spacing, typography, card } from '@/theme';
 import { getMarketSource } from '@/services/markets';
 import { PlatformBadge } from '@/components/Chip';
 import { OutcomeSplit } from '@/components/OutcomeSplit';
@@ -108,19 +108,15 @@ const styles = StyleSheet.create({
   content: { padding: spacing.lg, paddingBottom: spacing.xxl, flexGrow: 1 },
   kicker: { ...typography.kicker, color: colors.textFaint, marginBottom: spacing.lg },
   row: {
-    backgroundColor: colors.surface,
-    borderColor: colors.border,
-    borderWidth: 1,
-    borderRadius: radius.lg,
-    padding: spacing.lg,
+    ...card,
     gap: spacing.md,
   },
   rowHead: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   delta: { fontSize: 12, fontWeight: '700', fontVariant: ['tabular-nums'], flex: 1 },
   trash: {
-    width: 26,
-    height: 26,
-    borderRadius: 13,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     backgroundColor: colors.surfaceElevated,
     alignItems: 'center',
     justifyContent: 'center',

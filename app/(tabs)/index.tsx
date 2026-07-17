@@ -5,7 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery } from '@tanstack/react-query';
-import { colors, radius, spacing, typography } from '@/theme';
+import { colors, radius, spacing, typography, card } from '@/theme';
 import { getMarketSource } from '@/services/markets';
 import { recommendFeedDetailed, type RankedMarket } from '@/services/recommend';
 import { MarketCard } from '@/components/MarketCard';
@@ -251,11 +251,7 @@ const styles = StyleSheet.create({
   },
   demoText: { color: colors.text, ...typography.caption, fontWeight: '600' },
   skeleton: {
-    backgroundColor: colors.surface,
-    borderColor: colors.border,
-    borderWidth: 1,
-    borderRadius: radius.lg,
-    padding: spacing.lg,
+    ...card,
     gap: spacing.sm,
   },
   bone: { height: 10, borderRadius: 5, backgroundColor: colors.surfaceElevated },
