@@ -112,6 +112,8 @@ export function mockHistory(marketId: string): MarketSnapshot[] {
 export const MOCK_ANALYSIS: Record<string, AIAnalysis> = {
   'polymarket:fed-cut-sept': {
     marketId: 'polymarket:fed-cut-sept',
+    edge:
+      "ODDIQ's read: 43% is slightly low. The disinflation trend and a softening labor market lean the Fed toward a cut [1], and the market hasn't fully caught up to the repricing in rate futures [2]. Fair value looks closer to 50%. What would change our mind: a hot services CPI print or hawkish dot-plot revision.",
     summary:
       'Odds of a September cut jumped after a softer-than-expected inflation print reset rate expectations.',
     bullCase:
@@ -123,7 +125,11 @@ export const MOCK_ANALYSIS: Record<string, AIAnalysis> = {
     catalysts: ['Next CPI release', 'FOMC dot plot', 'Monthly jobs report'],
     riskFactors: ['Inflation re-acceleration', 'Hawkish Fed commentary', 'Oil price shock'],
     confidence: 'medium',
-    aiProbabilityEstimate: 0.46,
+    aiProbabilityEstimate: 0.5,
+    sources: [
+      { title: 'Inflation cools more than expected in latest CPI report', url: 'https://example.com/cpi', date: '2026-07-14' },
+      { title: 'Rate-cut odds climb in futures markets', url: 'https://example.com/futures', date: '2026-07-15' },
+    ],
     createdAt: now,
   },
 };

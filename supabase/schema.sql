@@ -58,6 +58,7 @@ create table if not exists ai_analysis (
   id                    bigserial primary key,
   market_id             text not null references markets(id) on delete cascade,
   snapshot_hash         text not null,           -- hash of inputs; dedupes regeneration
+  edge                  text not null default '',-- the opinionated headline thesis
   summary               text not null,
   bull_case             text not null,
   bear_case             text not null,
@@ -66,9 +67,14 @@ create table if not exists ai_analysis (
   risk_factors          text[] not null default '{}',
   confidence            confidence not null,
   ai_probability_estimate numeric,               -- 0..1
+  sources               jsonb not null default '[]', -- [{title,url,date}] retrieved news
   created_at            timestamptz not null default now(),
   unique (market_id, snapshot_hash)
 );
+
+-- If ai_analysis already exists from an earlier deploy, add the new columns:
+--   alter table ai_analysis add column if not exists edge text not null default '';
+--   alter table ai_analysis add column if not exists sources jsonb not null default '[]';
 
 -- ── watchlists ──────────────────────────────────────────────────────────────
 create table if not exists watchlists (

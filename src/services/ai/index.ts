@@ -20,6 +20,7 @@ function fallbackAnalysis(market: Market): AIAnalysis {
   const dir = market.change24h >= 0 ? 'up' : 'down';
   return {
     marketId: market.id,
+    edge: `The market's ${Math.round(market.probability * 100)}% looks roughly fair on the price action alone. Connect a news source (Tavily/Brave) to get ODDIQ's real edge with cited reporting.`,
     summary: `"${market.title}" is trading at ${Math.round(market.probability * 100)}% and moved ${dir} over the last 24 hours.`,
     bullCase: 'Momentum and recent flow favor the YES side; watch for confirmation from upcoming catalysts.',
     bearCase: 'The move may be noise; mean-reversion is likely if no new information arrives.',
@@ -28,6 +29,7 @@ function fallbackAnalysis(market: Market): AIAnalysis {
     riskFactors: ['Low liquidity', 'Headline risk'],
     confidence: 'medium',
     aiProbabilityEstimate: market.probability,
+    sources: [],
     createdAt: new Date().toISOString(),
   };
 }
@@ -63,6 +65,7 @@ export async function generateAnalysis(
       const parsed = parseAIAnalysis(json);
       result = {
         marketId: market.id,
+        edge: parsed.edge,
         summary: parsed.summary,
         bullCase: parsed.bull_case,
         bearCase: parsed.bear_case,
@@ -71,6 +74,7 @@ export async function generateAnalysis(
         riskFactors: parsed.risk_factors,
         confidence: parsed.confidence,
         aiProbabilityEstimate: parsed.ai_probability_estimate,
+        sources: parsed.sources.map((s) => ({ title: s.title, url: s.url, date: s.date ?? null })),
         createdAt: new Date().toISOString(),
       };
     } catch {
@@ -100,6 +104,7 @@ export async function fetchCachedAnalysis(marketId: string): Promise<AIAnalysis 
   if (!data) return null;
   return {
     marketId,
+    edge: data.edge ?? '',
     summary: data.summary,
     bullCase: data.bull_case,
     bearCase: data.bear_case,
@@ -108,6 +113,7 @@ export async function fetchCachedAnalysis(marketId: string): Promise<AIAnalysis 
     riskFactors: data.risk_factors ?? [],
     confidence: data.confidence ?? 'medium',
     aiProbabilityEstimate: data.ai_probability_estimate,
+    sources: data.sources ?? [],
     createdAt: data.created_at,
   };
 }

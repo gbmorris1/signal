@@ -49,8 +49,15 @@ export interface MarketHistory {
   synthetic: boolean;
 }
 
+export interface AISource {
+  title: string;
+  url: string;
+  date?: string | null;
+}
+
 export interface AIAnalysis {
   marketId: string;
+  edge: string; // the opinionated headline thesis
   summary: string;
   bullCase: string;
   bearCase: string;
@@ -59,6 +66,7 @@ export interface AIAnalysis {
   riskFactors: string[];
   confidence: Confidence;
   aiProbabilityEstimate: number | null; // 0..1
+  sources: AISource[];
   createdAt: string;
 }
 

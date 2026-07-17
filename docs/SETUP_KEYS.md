@@ -44,6 +44,25 @@ The app runs fully on mock data with **zero keys**. To connect live services, pr
 
 The function also needs `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY`, which Supabase injects automatically for deployed functions. Results are cached per market snapshot, so a given market is only analyzed once until it moves.
 
+### Option C — News retrieval (gives the AI its edge)
+
+Without a search key the AI reasons from price action alone (and says so). Add one free-tier search key so Pro/Trader analyses pull real news and cite it. Tavily is preferred; Brave is the fallback. You only need one.
+
+```bash
+supabase secrets set TAVILY_API_KEY=tvly-...     # tavily.com, ~1,000 free/mo — recommended
+# or
+supabase secrets set BRAVE_API_KEY=...           # brave.com/search/api, 2,000 free/mo
+supabase functions deploy analyze-market
+```
+
+Retrieval is depth-gated to control cost: Free = no news (teaser only), Pro = ~5 results, Trader = ~8 with advanced search. News-backed analyses cache per day so they refresh as the story develops.
+
+**Before deploying, add the two new `ai_analysis` columns** (SQL editor):
+```sql
+alter table ai_analysis add column if not exists edge text not null default '';
+alter table ai_analysis add column if not exists sources jsonb not null default '[]';
+```
+
 ---
 
 ## 3. Live Polymarket data — no key needed

@@ -96,7 +96,7 @@ export default function MarketDetailScreen() {
       track('gated_impression', { market_id: market.id, tier: entitlements.tier });
       // Teaser comes from the shared cache only, never a fresh model call.
       const cached = await fetchCachedAnalysis(market.id);
-      if (cached) setTeaser(firstSentence(cached.summary));
+      if (cached) setTeaser(firstSentence(cached.edge || cached.summary));
       return;
     }
     setLoadingAI(true);
@@ -307,12 +307,45 @@ function Analysis({ analysis }: { analysis: AIAnalysis }) {
   const confColor = CONFIDENCE_COLOR[analysis.confidence] ?? colors.accent;
   return (
     <View style={{ gap: spacing.md }}>
+      {analysis.edge ? (
+        <View style={[styles.card, styles.edgeCard, shadows.glowAccent]}>
+          <View style={styles.edgeHead}>
+            <Ionicons name="flash" size={15} color={colors.accent} />
+            <Text style={styles.edgeLabel}>ODDIQ'S EDGE</Text>
+          </View>
+          <Text style={styles.edgeBody}>{analysis.edge}</Text>
+        </View>
+      ) : null}
       <Block title="Summary" body={analysis.summary} />
       <Block title="Why it moved" body={analysis.whyChanged} />
       <Block title="Bull case" body={analysis.bullCase} accent={colors.up} />
       <Block title="Bear case" body={analysis.bearCase} accent={colors.down} />
       <ListBlock title="Catalysts to watch" items={analysis.catalysts} icon="calendar-outline" />
       <ListBlock title="Risk factors" items={analysis.riskFactors} icon="warning-outline" />
+      {analysis.sources.length > 0 && (
+        <View style={styles.card}>
+          <Text style={styles.cardLabel}>Sources</Text>
+          {analysis.sources.map((s, i) => (
+            <Pressable
+              key={s.url + i}
+              style={styles.sourceRow}
+              onPress={() => {
+                track('external_open', { kind: 'source', url: s.url });
+                if (s.url) void Linking.openURL(s.url);
+              }}
+            >
+              <Text style={styles.sourceIndex}>[{i + 1}]</Text>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.sourceTitle} numberOfLines={2}>
+                  {s.title || s.url}
+                </Text>
+                {s.date && <Text style={styles.sourceDate}>{s.date}</Text>}
+              </View>
+              <Ionicons name="open-outline" size={13} color={colors.textFaint} />
+            </Pressable>
+          ))}
+        </View>
+      )}
       <View style={styles.card}>
         <View style={styles.metaRow}>
           <Text style={styles.metaLabel}>Model's probability estimate</Text>
@@ -463,6 +496,19 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   gateTitle: { ...typography.heading, color: colors.text },
+  edgeCard: { borderColor: colors.accent, backgroundColor: colors.accentDim, gap: spacing.sm },
+  edgeHead: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
+  edgeLabel: { ...typography.kicker, color: colors.accent },
+  edgeBody: { ...typography.body, color: colors.text, lineHeight: 22 },
+  sourceRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingVertical: spacing.xs,
+  },
+  sourceIndex: { ...typography.mono, color: colors.accent, fontSize: 12 },
+  sourceTitle: { ...typography.caption, color: colors.text, lineHeight: 16 },
+  sourceDate: { fontSize: 10, color: colors.textFaint, marginTop: 1 },
   gateBody: { ...typography.body, color: colors.textMuted, lineHeight: 21, textTransform: 'capitalize' },
   teaserWrap: { gap: spacing.xs, marginBottom: spacing.xs },
   teaserText: { ...typography.body, color: colors.text, lineHeight: 21 },
