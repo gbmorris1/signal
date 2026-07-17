@@ -1,8 +1,17 @@
 import { useMemo, useState } from 'react';
-import { Linking, Pressable, ScrollView, Text, View, StyleSheet, useWindowDimensions } from 'react-native';
+import {
+  Linking,
+  Pressable,
+  ScrollView,
+  Text,
+  View,
+  StyleSheet,
+  useWindowDimensions,
+} from 'react-native';
 import { router, useLocalSearchParams, Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery } from '@tanstack/react-query';
+import * as Haptics from 'expo-haptics';
 import { colors, radius, spacing, typography, card, shadows, buttonPrimary } from '@/theme';
 import { getMarketSource, getCombinedSource } from '@/services/markets';
 import { generateAnalysis, fetchCachedAnalysis, firstSentence } from '@/services/ai';
@@ -11,14 +20,23 @@ import { ProbabilityChart } from '@/components/ProbabilityChart';
 import { ScoreExplainer } from '@/components/ScoreExplainer';
 import { OutcomeSplit } from '@/components/OutcomeSplit';
 import { ProbabilityGauge } from '@/components/ProbabilityGauge';
-import { AnimatedNumber, Enter } from '@/components/motion';
-import * as Haptics from 'expo-haptics';
+import { Enter } from '@/components/motion';
 import { SignalChip, PlatformBadge } from '@/components/Chip';
 import { useWatchlist } from '@/state/watchlist';
 import { useEntitlement } from '@/state/entitlement';
 import { getAiUsageToday, incrementAiUsage } from '@/state/usage';
 import { pct, signedPct, compactUsd, platformUrl } from '@/lib/format';
-import type { AIAnalysis, Market, MarketHistory } from '@/types';
+import type { AIAnalysis, Confidence, Market, MarketHistory } from '@/types';
+
+const CONFIDENCE_COLOR: Record<Confidence, string> = {
+  low: colors.warn,
+  medium: colors.accent,
+  high: colors.up,
+};
+
+function platformColor(p: 'polymarket' | 'kalshi'): string {
+  return p === 'polymarket' ? colors.polymarket : colors.kalshi;
+}
 
 export default function MarketDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -56,31 +74,34 @@ export default function MarketDetailScreen() {
 
   if (!market) {
     return (
-      <View style={styles.center}>
-        <Text style={styles.muted}>Loading market…</Text>
+      <View style={styles.loading}>
+        <View style={[styles.skeleton, { width: '55%', height: 14 }]} />
+        <View style={[styles.skeleton, { width: '90%', height: 22 }]} />
+        <View style={[styles.skeleton, { width: '100%', height: 120, borderRadius: radius.lg }]} />
+        <View style={[styles.skeleton, { width: '100%', height: 200, borderRadius: radius.lg }]} />
       </View>
     );
   }
 
   const up = market.change24h >= 0;
+  const flat = Math.round(market.change24h * 100) === 0;
   const saved = has(market.id);
 
   async function runAnalysis() {
     if (!market) return;
     track('explain_click', { market_id: market.id, tier: entitlements.tier });
-    // Enforce the daily analysis limit for this tier.
     const used = await getAiUsageToday();
     if (used >= entitlements.dailyAiAnalyses) {
       setGated(true);
       track('gated_impression', { market_id: market.id, tier: entitlements.tier });
-      // Teaser comes from the shared cache only — never a fresh model call.
+      // Teaser comes from the shared cache only, never a fresh model call.
       const cached = await fetchCachedAnalysis(market.id);
       if (cached) setTeaser(firstSentence(cached.summary));
       return;
     }
     setLoadingAI(true);
     try {
-      // Depth follows the tier: free=shallow teaser, pro=standard, trader=deep.
+      // Depth follows the tier: free=shallow, pro=standard, trader=deep.
       const result = await generateAnalysis(market, snapshots, entitlements.aiDepth);
       await incrementAiUsage();
       setAnalysis(result);
@@ -104,7 +125,7 @@ export default function MarketDetailScreen() {
   }
 
   return (
-    <ScrollView contentContainerStyle={styles.content}>
+    <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
       <Stack.Screen
         options={{
           title: market.platform.charAt(0).toUpperCase() + market.platform.slice(1),
@@ -112,39 +133,55 @@ export default function MarketDetailScreen() {
         }}
       />
 
-      <View style={styles.badgeRow}>
-        <PlatformBadge platform={market.platform} size="md" />
-        <SignalChip signal={market.signal} />
-      </View>
-      <Text style={styles.title}>{market.title}</Text>
-
-      <View style={[styles.card, styles.headlineCard, up ? shadows.glowUp : shadows.glowDown]}>
-        <ProbabilityGauge probability={market.probability} up={up} />
-        <View style={{ flex: 1 }}>
-          <OutcomeSplit market={market} size="lg" />
+      {/* ── Headline ── */}
+      <Enter>
+        <View style={styles.badgeRow}>
+          <PlatformBadge platform={market.platform} size="md" />
+          <SignalChip signal={market.signal} />
+          <View style={{ flex: 1 }} />
+          <Pressable hitSlop={10} onPress={onToggleSave} style={[styles.saveStar, saved && styles.saveStarOn]}>
+            <Ionicons name={saved ? 'star' : 'star-outline'} size={17} color={saved ? colors.bg : colors.textMuted} />
+          </Pressable>
         </View>
-      </View>
+        <Text style={styles.title}>{market.title}</Text>
 
-      <View style={styles.statsRow}>
-        <View>
-          <AnimatedNumber
-            value={market.probability * 100}
-            format={(v) => `${Math.round(v)}%`}
-            style={[styles.statValue, { color: colors.text }]}
-          />
-          <Text style={styles.statLabel}>{market.outcomeLabels[0].toLowerCase()}</Text>
+        <View style={[styles.card, styles.headlineCard, up ? shadows.glowUp : shadows.glowDown]}>
+          <ProbabilityGauge probability={market.probability} up={up} />
+          <View style={{ flex: 1, gap: spacing.md }}>
+            <OutcomeSplit market={market} size="lg" />
+            {!flat && (
+              <Text style={[styles.moveLine, { color: up ? colors.up : colors.down }]}>
+                {signedPct(market.change24h)} in the last 24h
+              </Text>
+            )}
+          </View>
         </View>
-        <Stat label="24h" value={signedPct(market.change24h)} color={up ? colors.up : colors.down} />
-        <Stat label="volume" value={compactUsd(market.volume)} />
-        <Pressable onPress={() => setShowScore(true)} hitSlop={8}>
-          <Stat
-            label="signal score ⓘ"
-            value={String(market.aiScore ?? '–')}
-            color={colors.accent}
-          />
-        </Pressable>
-      </View>
 
+        {/* ── Stat strip ── */}
+        <View style={styles.statStrip}>
+          <View style={styles.statCell}>
+            <Text style={[styles.statValue, { color: flat ? colors.textMuted : up ? colors.up : colors.down }]}>
+              {signedPct(market.change24h)}
+            </Text>
+            <Text style={styles.statLabel}>24h move</Text>
+          </View>
+          <View style={styles.statDivider} />
+          <View style={styles.statCell}>
+            <Text style={styles.statValue}>{compactUsd(market.volume)}</Text>
+            <Text style={styles.statLabel}>volume</Text>
+          </View>
+          <View style={styles.statDivider} />
+          <Pressable style={styles.statCell} hitSlop={8} onPress={() => setShowScore(true)}>
+            <Text style={[styles.statValue, { color: colors.accent }]}>{market.aiScore ?? '–'}</Text>
+            <View style={styles.scoreLabelRow}>
+              <Text style={styles.statLabel}>signal score</Text>
+              <Ionicons name="information-circle-outline" size={11} color={colors.textFaint} />
+            </View>
+          </Pressable>
+        </View>
+      </Enter>
+
+      {/* ── Chart ── */}
       <View style={styles.chartCard}>
         <View style={styles.chartHeader}>
           <Text style={styles.cardLabel}>Probability · past week</Text>
@@ -157,6 +194,7 @@ export default function MarketDetailScreen() {
         <ProbabilityChart data={snapshots} width={width - spacing.lg * 4} up={up} />
       </View>
 
+      {/* ── About ── */}
       {market.description && (
         <View style={styles.card}>
           <Text style={styles.cardLabel}>About this market</Text>
@@ -171,6 +209,7 @@ export default function MarketDetailScreen() {
         </View>
       )}
 
+      {/* ── Availability ── */}
       <View style={styles.card}>
         <Text style={styles.cardLabel}>Platform availability</Text>
         <CompareRow label={market.platform} probability={market.probability} highlight />
@@ -185,17 +224,11 @@ export default function MarketDetailScreen() {
             </Pressable>
           ))
         ) : (
-          <View style={styles.exclusiveRow}>
-            <Text style={styles.compareEmpty}>
-              Only listed on {market.platform === 'polymarket' ? 'Polymarket' : 'Kalshi'}, with no
-              equivalent market on {market.platform === 'polymarket' ? 'Kalshi' : 'Polymarket'}.
-            </Text>
-          </View>
+          <Text style={styles.compareEmpty}>
+            Only listed on {market.platform === 'polymarket' ? 'Polymarket' : 'Kalshi'}, with no
+            equivalent market on {market.platform === 'polymarket' ? 'Kalshi' : 'Polymarket'}.
+          </Text>
         )}
-        <Text style={styles.compareFoot}>
-          Most questions trade on a single platform. When both list the same question, the spread
-          between their odds is shown.
-        </Text>
         <Pressable
           style={[
             styles.externalBtn,
@@ -210,11 +243,8 @@ export default function MarketDetailScreen() {
             void Linking.openURL(platformUrl(market));
           }}
         >
-          {/* simple brand glyph: P / K monogram in the platform color */}
           <View style={[styles.brandGlyph, { backgroundColor: platformColor(market.platform) }]}>
-            <Text style={styles.brandGlyphText}>
-              {market.platform === 'polymarket' ? 'P' : 'K'}
-            </Text>
+            <Text style={styles.brandGlyphText}>{market.platform === 'polymarket' ? 'P' : 'K'}</Text>
           </View>
           <Text style={[styles.externalText, { color: platformColor(market.platform) }]}>
             Open on {market.platform === 'polymarket' ? 'Polymarket' : 'Kalshi'}
@@ -223,28 +253,21 @@ export default function MarketDetailScreen() {
         </Pressable>
       </View>
 
-      <Pressable style={[styles.saveBtn, saved && styles.saveBtnActive]} onPress={onToggleSave}>
-        <Text style={[styles.saveText, saved && { color: colors.bg }]}>
-          {saved ? '★ Saved to watchlist' : '☆ Save to watchlist'}
-        </Text>
-      </Pressable>
+      {/* ── AI Analysis ── */}
+      <View style={styles.aiHeader}>
+        <Text style={styles.sectionKicker}>AI ANALYSIS</Text>
+        <Text style={styles.aiDisclaimer}>Model view from market data. Not financial advice.</Text>
+      </View>
 
-      <Text style={styles.section}>AI Analysis</Text>
-      <Text style={styles.aiDisclaimer}>
-        Model reasoning from price action and market data, not a live news feed. Not financial
-        advice.
-      </Text>
       {gated ? (
         <View style={styles.gateCard}>
           {teaser && (
             <View style={styles.teaserWrap}>
               <Text style={styles.teaserText}>{teaser}</Text>
-              {/* obscured continuation implies the rest of the report */}
               <Text style={styles.teaserBlur} numberOfLines={2}>
                 The full report covers the bull and bear cases, why the market moved, upcoming
                 catalysts with timing, and the model's own probability estimate…
               </Text>
-              <View style={styles.teaserFade} />
             </View>
           )}
           <Text style={styles.gateTitle}>
@@ -266,9 +289,8 @@ export default function MarketDetailScreen() {
         </View>
       ) : !analysis ? (
         <Pressable style={styles.explainBtn} onPress={runAnalysis} disabled={loadingAI}>
-          <Text style={styles.explainText}>
-            {loadingAI ? 'Analyzing…' : 'Explain this move'}
-          </Text>
+          <Ionicons name="sparkles" size={15} color={colors.bg} />
+          <Text style={styles.explainText}>{loadingAI ? 'Analyzing…' : 'Explain this move'}</Text>
         </Pressable>
       ) : (
         <Enter>
@@ -282,32 +304,66 @@ export default function MarketDetailScreen() {
 }
 
 function Analysis({ analysis }: { analysis: AIAnalysis }) {
+  const confColor = CONFIDENCE_COLOR[analysis.confidence] ?? colors.accent;
   return (
     <View style={{ gap: spacing.md }}>
       <Block title="Summary" body={analysis.summary} />
       <Block title="Why it moved" body={analysis.whyChanged} />
       <Block title="Bull case" body={analysis.bullCase} accent={colors.up} />
       <Block title="Bear case" body={analysis.bearCase} accent={colors.down} />
-      <ListBlock title="Catalysts" items={analysis.catalysts} />
-      <ListBlock title="Risk factors" items={analysis.riskFactors} />
+      <ListBlock title="Catalysts to watch" items={analysis.catalysts} icon="calendar-outline" />
+      <ListBlock title="Risk factors" items={analysis.riskFactors} icon="warning-outline" />
       <View style={styles.card}>
         <View style={styles.metaRow}>
-          <Text style={styles.metaLabel}>AI probability estimate</Text>
+          <Text style={styles.metaLabel}>Model's probability estimate</Text>
           <Text style={styles.metaValue}>
             {analysis.aiProbabilityEstimate != null ? pct(analysis.aiProbabilityEstimate) : '–'}
           </Text>
         </View>
         <View style={styles.metaRow}>
           <Text style={styles.metaLabel}>Confidence</Text>
-          <Text style={[styles.metaValue, { textTransform: 'capitalize' }]}>{analysis.confidence}</Text>
+          <View style={[styles.confChip, { borderColor: confColor }]}>
+            <View style={[styles.confDot, { backgroundColor: confColor }]} />
+            <Text style={[styles.confText, { color: confColor }]}>
+              {analysis.confidence.toUpperCase()}
+            </Text>
+          </View>
         </View>
       </View>
     </View>
   );
 }
 
-function platformColor(p: 'polymarket' | 'kalshi'): string {
-  return p === 'polymarket' ? colors.polymarket : colors.kalshi;
+function Block({ title, body, accent }: { title: string; body: string; accent?: string }) {
+  return (
+    <View style={[styles.card, accent ? { borderLeftWidth: 3, borderLeftColor: accent } : null]}>
+      <Text style={[styles.cardLabel, accent ? { color: accent } : null]}>{title}</Text>
+      <Text style={styles.cardBody}>{body}</Text>
+    </View>
+  );
+}
+
+function ListBlock({
+  title,
+  items,
+  icon,
+}: {
+  title: string;
+  items: string[];
+  icon: keyof typeof Ionicons.glyphMap;
+}) {
+  if (items.length === 0) return null;
+  return (
+    <View style={styles.card}>
+      <Text style={styles.cardLabel}>{title}</Text>
+      {items.map((it) => (
+        <View key={it} style={styles.listRow}>
+          <Ionicons name={icon} size={13} color={colors.textFaint} style={{ marginTop: 3 }} />
+          <Text style={[styles.cardBody, { flex: 1 }]}>{it}</Text>
+        </View>
+      ))}
+    </View>
+  );
 }
 
 function CompareRow({
@@ -341,130 +397,91 @@ function CompareRow({
   );
 }
 
-function Stat({ label, value, color = colors.text }: { label: string; value: string; color?: string }) {
-  return (
-    <View>
-      <Text style={[styles.statValue, { color }]}>{value}</Text>
-      <Text style={styles.statLabel}>{label}</Text>
-    </View>
-  );
-}
-
-function Block({ title, body, accent }: { title: string; body: string; accent?: string }) {
-  return (
-    <View style={styles.card}>
-      <Text style={[styles.cardLabel, accent ? { color: accent } : null]}>{title}</Text>
-      <Text style={styles.cardBody}>{body}</Text>
-    </View>
-  );
-}
-
-function ListBlock({ title, items }: { title: string; items: string[] }) {
-  if (items.length === 0) return null;
-  return (
-    <View style={styles.card}>
-      <Text style={styles.cardLabel}>{title}</Text>
-      {items.map((it) => (
-        <Text key={it} style={styles.cardBody}>
-          • {it}
-        </Text>
-      ))}
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
-  content: { padding: spacing.lg, paddingBottom: spacing.xxl, gap: spacing.md },
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.bg },
-  muted: { color: colors.textMuted },
-  title: { ...typography.title, color: colors.text, marginTop: spacing.xs },
-  statsRow: { flexDirection: 'row', justifyContent: 'space-between', marginVertical: spacing.sm },
-  statValue: { ...typography.monoLarge },
-  statLabel: { color: colors.textFaint, fontSize: 11, marginTop: 2 },
-  chartCard: {
-    ...card,
-    gap: spacing.sm,
-  },
-  headlineCard: { flexDirection: 'row', alignItems: 'center', gap: spacing.lg },
-  chartHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  syntheticTag: {
-    fontSize: 9,
-    fontWeight: '700',
-    letterSpacing: 0.8,
-    color: colors.warn,
-  },
-  scrubHint: { fontSize: 10, color: colors.textFaint, fontStyle: 'italic' },
+  content: { padding: spacing.lg, paddingBottom: spacing.xxxl, gap: spacing.md },
+  loading: { flex: 1, backgroundColor: colors.bg, padding: spacing.lg, gap: spacing.md },
+  skeleton: { backgroundColor: colors.surface, borderRadius: radius.sm },
   badgeRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  exclusiveRow: { paddingVertical: spacing.xs },
-  compareFoot: { fontSize: 11, color: colors.textFaint, lineHeight: 16, marginTop: spacing.xs },
+  saveStar: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    borderWidth: 1,
+    borderColor: colors.borderStrong,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  saveStarOn: { backgroundColor: colors.warn, borderColor: colors.warn },
+  title: { ...typography.title, color: colors.text, lineHeight: 27, marginTop: spacing.md },
+  card: { ...card, gap: spacing.sm },
+  headlineCard: { flexDirection: 'row', alignItems: 'center', gap: spacing.lg, marginTop: spacing.md },
+  moveLine: { fontSize: 12, fontWeight: '700', fontVariant: ['tabular-nums'] },
+  statStrip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderWidth: 1,
+    borderRadius: radius.lg,
+    paddingVertical: spacing.md,
+    marginTop: spacing.md,
+  },
+  statCell: { flex: 1, alignItems: 'center', gap: 2 },
+  statDivider: { width: 1, height: 28, backgroundColor: colors.border },
+  statValue: { ...typography.monoLarge, fontSize: 17, color: colors.text },
+  statLabel: { fontSize: 10, color: colors.textFaint, letterSpacing: 0.3 },
+  scoreLabelRow: { flexDirection: 'row', alignItems: 'center', gap: 3 },
+  chartCard: { ...card, gap: spacing.sm },
+  chartHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  cardLabel: { ...typography.bodyStrong, color: colors.textMuted, fontSize: 13 },
+  cardBody: { ...typography.body, color: colors.text, lineHeight: 21 },
+  syntheticTag: { fontSize: 9, fontWeight: '700', letterSpacing: 0.8, color: colors.warn },
+  scrubHint: { fontSize: 10, color: colors.textFaint, fontStyle: 'italic' },
+  aboutText: { ...typography.body, color: colors.textMuted, lineHeight: 21 },
+  aboutMore: { fontSize: 12, fontWeight: '700', color: colors.accent, marginTop: 2 },
+  compareEmpty: { ...typography.caption, color: colors.textMuted, lineHeight: 18 },
+  thisMarket: { fontSize: 11, color: colors.textFaint, fontStyle: 'italic' },
   externalBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
     borderWidth: 1,
-    borderColor: colors.borderStrong,
     borderRadius: radius.md,
     paddingVertical: spacing.md,
-    marginTop: spacing.sm,
+    marginTop: spacing.xs,
   },
-  externalText: { fontSize: 13, fontWeight: '700', color: colors.text },
-  brandGlyph: {
-    width: 18,
-    height: 18,
-    borderRadius: 5,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
+  externalText: { fontSize: 13, fontWeight: '700' },
+  brandGlyph: { width: 18, height: 18, borderRadius: 5, alignItems: 'center', justifyContent: 'center' },
   brandGlyphText: { fontSize: 11, fontWeight: '700', color: colors.bg },
-  aiDisclaimer: { ...typography.caption, color: colors.textFaint, marginTop: -spacing.sm },
-  cardLabel: { ...typography.bodyStrong, color: colors.textMuted },
-  cardBody: { ...typography.body, color: colors.text, lineHeight: 21 },
-  card: {
-    ...card,
-    gap: spacing.xs,
-  },
-  saveBtn: {
-    borderColor: colors.accent,
-    borderWidth: 1,
-    borderRadius: radius.md,
-    paddingVertical: spacing.md,
-    alignItems: 'center',
-  },
-  saveBtnActive: { backgroundColor: colors.accent },
-  saveText: { color: colors.accent, fontWeight: '600' },
-  section: { ...typography.heading, color: colors.text, marginTop: spacing.sm },
-  explainBtn: { ...buttonPrimary },
-  explainText: { color: colors.bg, fontWeight: '700' },
+  aiHeader: { marginTop: spacing.md, gap: 2 },
+  sectionKicker: { ...typography.kicker, color: colors.textFaint },
+  aiDisclaimer: { fontSize: 11, color: colors.textFaint },
   gateCard: {
-    backgroundColor: colors.surface,
+    ...card,
     borderColor: colors.accent,
-    borderWidth: 1,
-    borderRadius: radius.lg,
-    padding: spacing.lg,
     gap: spacing.sm,
   },
   gateTitle: { ...typography.heading, color: colors.text },
-  teaserWrap: { position: 'relative', gap: spacing.xs, marginBottom: spacing.xs },
+  gateBody: { ...typography.body, color: colors.textMuted, lineHeight: 21, textTransform: 'capitalize' },
+  teaserWrap: { gap: spacing.xs, marginBottom: spacing.xs },
   teaserText: { ...typography.body, color: colors.text, lineHeight: 21 },
   teaserBlur: { ...typography.body, color: colors.textFaint, lineHeight: 21, opacity: 0.45 },
-  teaserFade: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 0,
-    height: 34,
-    backgroundColor: 'transparent',
-    borderBottomWidth: 34,
-    borderBottomColor: colors.surface,
-    opacity: 0.85,
-  },
-  gateBody: { ...typography.body, color: colors.textMuted, lineHeight: 21, textTransform: 'capitalize' },
-  metaRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 2 },
+  explainBtn: { ...buttonPrimary, flexDirection: 'row', gap: spacing.sm },
+  explainText: { color: colors.bg, fontWeight: '700' },
+  listRow: { flexDirection: 'row', gap: spacing.sm, alignItems: 'flex-start' },
+  metaRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 2 },
   metaLabel: { color: colors.textMuted, ...typography.body },
   metaValue: { color: colors.text, ...typography.mono },
-  compareEmpty: { ...typography.caption, color: colors.textMuted, lineHeight: 18 },
-  aboutText: { ...typography.body, color: colors.textMuted, lineHeight: 21 },
-  aboutMore: { fontSize: 12, fontWeight: '700', color: colors.accent, marginTop: 2 },
-  thisMarket: { fontSize: 11, color: colors.textFaint, fontStyle: 'italic' },
+  confChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    borderWidth: 1,
+    borderRadius: radius.pill,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 2,
+  },
+  confDot: { width: 6, height: 6, borderRadius: 3 },
+  confText: { fontSize: 10, fontWeight: '700', letterSpacing: 0.5 },
 });
