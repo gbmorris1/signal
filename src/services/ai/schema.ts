@@ -10,13 +10,15 @@ const sourceSchema = z.object({
 export const aiAnalysisSchema = z.object({
   edge: z.string().default(''),
   summary: z.string().min(1),
-  bull_case: z.string().min(1),
-  bear_case: z.string().min(1),
-  why_changed: z.string().min(1),
+  // Tolerant of truncated/repaired model output: a partial answer still renders
+  // rather than throwing to the canned fallback.
+  bull_case: z.string().default(''),
+  bear_case: z.string().default(''),
+  why_changed: z.string().default(''),
   catalysts: z.array(z.string()).default([]),
   risk_factors: z.array(z.string()).default([]),
-  confidence: z.enum(['low', 'medium', 'high']),
-  ai_probability_estimate: z.number().min(0).max(1).nullable(),
+  confidence: z.enum(['low', 'medium', 'high']).catch('medium'),
+  ai_probability_estimate: z.number().min(0).max(1).nullable().catch(null),
   sources: z.array(sourceSchema).default([]),
 });
 

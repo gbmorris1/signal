@@ -41,20 +41,20 @@ const ANTHROPIC_MODEL = AI_MODEL_ENV ?? 'claude-sonnet-5';
 type Depth = 'shallow' | 'standard' | 'deep';
 const DEPTH_CONFIG: Record<Depth, { maxTokens: number; results: number; extra: string }> = {
   shallow: {
-    maxTokens: 320,
+    maxTokens: 500,
     results: 0, // no retrieval — the free-tier teaser
     extra: 'Keep every field to ONE short sentence; max 2 catalysts and 2 risk_factors. Edge is one sentence.',
   },
   standard: {
-    maxTokens: 1100,
+    maxTokens: 1800,
     results: 5,
-    extra: '',
+    extra: 'Keep edge to ~3 sentences, summary/bull_case/bear_case to 2 sentences each, max 4 catalysts and 4 risk_factors.',
   },
   deep: {
-    maxTokens: 2200,
+    maxTokens: 3400,
     results: 8,
     extra:
-      'Go deeper: 3-4 sentences for bull_case/bear_case, cover second-order effects, and give up to 6 catalysts with rough timing. The edge should be a sharp, contrarian-where-justified 3-4 sentence thesis with explicit conviction.',
+      'Go deeper: 3-4 sentences for bull_case/bear_case, cover second-order effects, up to 6 catalysts with rough timing. The edge is a sharp, contrarian-where-justified 3-4 sentence thesis with explicit conviction.',
   },
 };
 function asDepth(v: unknown): Depth {
@@ -156,7 +156,9 @@ sources. Your job:
 - Form a clear directional read: is the market's implied probability too high,
   too low, or fair? Say so plainly and commit to it in "edge".
 - Ground every claim in the sources or in verifiable base rates / scheduled
-  events you know. Cite sources inline as [1], [2] matching the list.
+  events you know. Cite sources inline as [1], [2] (ASCII square brackets only)
+  matching the list.
+- Keep it tight. Return valid, complete JSON — do not run long and get cut off.
 - NEVER invent a news event. If the sources don't explain a move, say what the
   price action alone implies and flag the uncertainty.
 - Be specific: real names, real dates, real mechanisms. No "sentiment shifted".
@@ -214,6 +216,63 @@ function userPrompt(m: Market, history: Snapshot[] | undefined, sources: Source[
 
 function jsonResponse(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
+}
+
+/**
+ * Tolerant JSON extraction from model output. Handles code fences, full-width
+ * 【n】 citation brackets, and — critically — responses truncated by the token
+ * limit, by closing any open string/array/object so a partial answer still
+ * parses instead of falling back to canned text.
+ */
+function extractJson(text: string): Record<string, unknown> | null {
+  const cleaned = text
+    .replace(/```json/gi, '')
+    .replace(/```/g, '')
+    .replace(/【/g, '[')
+    .replace(/】/g, ']');
+  const start = cleaned.indexOf('{');
+  if (start < 0) return null;
+  const body = cleaned.slice(start);
+
+  const tryParse = (s: string): Record<string, unknown> | null => {
+    try {
+      return JSON.parse(s);
+    } catch {
+      return null;
+    }
+  };
+
+  const direct = tryParse(body);
+  if (direct) return direct;
+
+  // Repair a truncated tail: close an open string, then unclosed [ and {.
+  let inStr = false;
+  let esc = false;
+  let depthObj = 0;
+  let depthArr = 0;
+  for (const c of body) {
+    if (esc) {
+      esc = false;
+      continue;
+    }
+    if (c === '\\') {
+      esc = true;
+      continue;
+    }
+    if (c === '"') {
+      inStr = !inStr;
+      continue;
+    }
+    if (inStr) continue;
+    if (c === '{') depthObj++;
+    else if (c === '}') depthObj--;
+    else if (c === '[') depthArr++;
+    else if (c === ']') depthArr--;
+  }
+  let repaired = body.replace(/,\s*$/, '');
+  if (inStr) repaired += '"';
+  repaired += ']'.repeat(Math.max(0, depthArr)) + '}'.repeat(Math.max(0, depthObj));
+  return tryParse(repaired);
 }
 
 // ── Generation ───────────────────────────────────────────────────────────────
@@ -335,11 +394,8 @@ Deno.serve(async (req: Request) => {
     return jsonResponse({ error: String(e) }, 502);
   }
 
-  let parsed: Record<string, unknown>;
-  try {
-    const jsonMatch = text.match(/\{[\s\S]*\}/);
-    parsed = JSON.parse(jsonMatch ? jsonMatch[0] : text);
-  } catch {
+  const parsed = extractJson(text);
+  if (!parsed || !parsed.summary) {
     return jsonResponse({ error: 'model returned non-JSON', raw: text.slice(0, 400) }, 502);
   }
 

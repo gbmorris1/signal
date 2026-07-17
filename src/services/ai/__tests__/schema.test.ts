@@ -35,17 +35,16 @@ describe('AI analysis schema', () => {
     expect(parsed.sources).toEqual([]);
   });
 
-  it('rejects an out-of-range probability', () => {
-    expect(() =>
-      parseAIAnalysis({
-        summary: 's',
-        bull_case: 'b',
-        bear_case: 'be',
-        why_changed: 'w',
-        confidence: 'low',
-        ai_probability_estimate: 1.5,
-      }),
-    ).toThrow();
+  it('coerces an out-of-range probability to null (tolerant parsing)', () => {
+    const parsed = parseAIAnalysis({
+      summary: 's',
+      bull_case: 'b',
+      bear_case: 'be',
+      why_changed: 'w',
+      confidence: 'low',
+      ai_probability_estimate: 1.5,
+    });
+    expect(parsed.ai_probability_estimate).toBeNull();
   });
 });
 
