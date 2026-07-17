@@ -30,10 +30,15 @@ const AI_MODEL_ENV = Deno.env.get('AI_MODEL');
 
 // OpenRouter's free-tier catalog rotates — verify against
 // https://openrouter.ai/api/v1/models (ids ending ':free') before changing.
+// Avoid "reasoning" models here: they spend the token budget on chain-of-
+// thought monologue and can get cut off before ever emitting the JSON object,
+// which is exactly what nemotron-3-ultra/nano-omni-reasoning did at shallow
+// depth's 500-token cap. Plain instruct models go straight to the answer.
 const FREE_MODELS = [
-  'nvidia/nemotron-3-ultra-550b-a55b:free',
-  'nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free',
   'tencent/hy3:free',
+  'poolside/laguna-m.1:free',
+  'poolside/laguna-xs-2.1:free',
+  'cohere/north-mini-code:free',
 ];
 const OPENROUTER_MODELS = AI_MODEL_ENV ? [AI_MODEL_ENV] : FREE_MODELS;
 const ANTHROPIC_MODEL = AI_MODEL_ENV ?? 'claude-sonnet-5';
