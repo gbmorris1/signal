@@ -28,12 +28,12 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 const PROVIDER: 'openrouter' | 'anthropic' = OPENROUTER_API_KEY ? 'openrouter' : 'anthropic';
 const AI_MODEL_ENV = Deno.env.get('AI_MODEL');
 
+// OpenRouter's free-tier catalog rotates — verify against
+// https://openrouter.ai/api/v1/models (ids ending ':free') before changing.
 const FREE_MODELS = [
-  'meta-llama/llama-3.3-70b-instruct:free',
-  'qwen/qwen3-next-80b-a3b-instruct:free',
-  'google/gemma-4-31b-it:free',
-  'nousresearch/hermes-3-llama-3.1-405b:free',
-  'nvidia/nemotron-3-super-120b-a12b:free',
+  'nvidia/nemotron-3-ultra-550b-a55b:free',
+  'nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free',
+  'tencent/hy3:free',
 ];
 const OPENROUTER_MODELS = AI_MODEL_ENV ? [AI_MODEL_ENV] : FREE_MODELS;
 const ANTHROPIC_MODEL = AI_MODEL_ENV ?? 'claude-sonnet-5';
