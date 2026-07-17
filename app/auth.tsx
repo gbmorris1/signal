@@ -17,7 +17,6 @@ import { BrandMark } from '@/components/BrandMark';
 import { ExampleEdge } from '@/components/ExampleEdge';
 import { track } from '@/lib/analytics';
 import { useAuth, hasSupabase } from '@/state/auth';
-import { getMarketSource } from '@/services/markets';
 
 const TAGLINE = 'The AI research terminal for prediction markets';
 
@@ -31,31 +30,9 @@ export default function AuthScreen() {
   const [notice, setNotice] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [sentTo, setSentTo] = useState<string | null>(null);
-  const [demoLoading, setDemoLoading] = useState(false);
 
-  // Land the demo user straight on the most compelling live market instead of
-  // the Home tab — cuts the "how many taps to the wow moment" gap the audit
-  // flagged, without touching demo mode's AI-analysis gate (still blocked;
-  // this just gets them to a real chart/probability screen faster).
-  async function exploreDemo() {
+  function exploreDemo() {
     enterDemo();
-    setDemoLoading(true);
-    try {
-      const markets = await getMarketSource().listMarkets();
-      const ranked = [...markets].sort((a, b) => (b.aiScore ?? 0) - (a.aiScore ?? 0));
-      const best = ranked.find((m) => m.signal === 'opportunity') ?? ranked[0];
-      if (best) {
-        // Replace auth with the tab home first so Back from the market
-        // screen lands somewhere real, then push straight to the market.
-        router.replace('/(tabs)');
-        router.push(`/market/${encodeURIComponent(best.id)}`);
-        return;
-      }
-    } catch {
-      /* fall through to the tab home */
-    } finally {
-      setDemoLoading(false);
-    }
     router.replace('/(tabs)');
   }
 
@@ -222,11 +199,9 @@ export default function AuthScreen() {
             <View style={styles.divider} />
           </View>
 
-          <Pressable style={styles.secondary} onPress={exploreDemo} disabled={demoLoading}>
+          <Pressable style={styles.secondary} onPress={exploreDemo}>
             <Ionicons name="compass-outline" size={16} color={colors.text} />
-            <Text style={styles.secondaryText}>
-              {demoLoading ? 'Loading a market…' : 'Explore the demo first'}
-            </Text>
+            <Text style={styles.secondaryText}>Explore the demo first</Text>
           </Pressable>
 
           {!hasSupabase && (

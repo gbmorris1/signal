@@ -2,10 +2,11 @@ import { useState } from 'react';
 import { Modal, Pressable, Text, View, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, radius, spacing, typography, shadows, buttonPrimary } from '@/theme';
+import { PlatformLogo } from '@/components/PlatformLogo';
 
 const PLATFORM = {
-  polymarket: { name: 'Polymarket', color: colors.polymarket, dim: colors.polymarketDim, glyph: 'P' },
-  kalshi: { name: 'Kalshi', color: colors.kalshi, dim: colors.kalshiDim, glyph: 'K' },
+  polymarket: { name: 'Polymarket', color: colors.polymarket, dim: colors.polymarketDim },
+  kalshi: { name: 'Kalshi', color: colors.kalshi, dim: colors.kalshiDim },
 } as const;
 
 /**
@@ -33,7 +34,7 @@ export function ExternalLinkSheet({
         <Pressable style={styles.sheet} onPress={() => {}}>
           <View style={[styles.glyph, { backgroundColor: p.dim, borderColor: p.color }]}>
             <View style={[styles.glyphInner, { backgroundColor: p.color }]}>
-              <Text style={styles.glyphText}>{p.glyph}</Text>
+              <PlatformLogo platform={platform} size={16} color={colors.bg} />
             </View>
           </View>
 
@@ -90,7 +91,6 @@ const styles = StyleSheet.create({
     ...shadows.card,
   },
   glyphInner: { width: 30, height: 30, borderRadius: 9, alignItems: 'center', justifyContent: 'center' },
-  glyphText: { color: colors.bg, fontWeight: '800', fontSize: 16 },
   title: { ...typography.title, color: colors.text, fontSize: 19, textAlign: 'center' },
   body: { ...typography.caption, color: colors.textMuted, lineHeight: 19, textAlign: 'center' },
   checkRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, alignSelf: 'flex-start', paddingVertical: spacing.xs },

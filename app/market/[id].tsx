@@ -25,6 +25,7 @@ import { OutcomeSplit } from '@/components/OutcomeSplit';
 import { ProbabilityGauge } from '@/components/ProbabilityGauge';
 import { ExternalLinkSheet } from '@/components/ExternalLinkSheet';
 import { Bone } from '@/components/Skeleton';
+import { PlatformLogo } from '@/components/PlatformLogo';
 import { Enter } from '@/components/motion';
 import { SignalChip, PlatformBadge } from '@/components/Chip';
 import { useWatchlist } from '@/state/watchlist';
@@ -317,7 +318,7 @@ export default function MarketDetailScreen() {
           onPress={openOnPlatform}
         >
           <View style={[styles.brandGlyph, { backgroundColor: platformColor(market.platform) }]}>
-            <Text style={styles.brandGlyphText}>{market.platform === 'polymarket' ? 'P' : 'K'}</Text>
+            <PlatformLogo platform={market.platform} size={15} color={colors.bg} />
           </View>
           <Text style={[styles.externalText, { color: platformColor(market.platform) }]}>
             Open on {market.platform === 'polymarket' ? 'Polymarket' : 'Kalshi'}
@@ -384,6 +385,15 @@ export default function MarketDetailScreen() {
             onCite={onCite}
             highlightedSource={highlightedSource}
           />
+          {entitlements.tier !== 'trader' && (
+            <UpsellCard
+              tier={entitlements.tier}
+              onUpgrade={(highlight) => {
+                track('paywall_view', { source: 'analysis_upsell', market_id: market.id });
+                router.push(`/paywall?highlight=${highlight}`);
+              }}
+            />
+          )}
         </Enter>
       )}
 
@@ -511,6 +521,62 @@ function Analysis({
           </View>
         </View>
       </View>
+    </View>
+  );
+}
+
+/**
+ * After the analysis, show a non-Trader reader exactly what a higher tier
+ * would have added to THIS report — concrete depth/news/quota differences,
+ * not a generic "upgrade now" nag.
+ */
+function UpsellCard({
+  tier,
+  onUpgrade,
+}: {
+  tier: 'free' | 'pro';
+  onUpgrade: (highlight: 'pro' | 'trader') => void;
+}) {
+  const isFree = tier === 'free';
+  const kicker = isFree ? "YOU'RE SEEING THE QUICK READ" : 'GO DEEPER';
+  const title = isFree
+    ? 'Pro & Trader read the news behind the move.'
+    : 'Trader digs deeper than Pro.';
+  const rows = isFree
+    ? [
+        { icon: 'newspaper-outline' as const, text: 'Pro grounds every analysis in live news sources with citations' },
+        { icon: 'layers-outline' as const, text: 'A deeper thesis and 25 analyses a day' },
+        { icon: 'infinite-outline' as const, text: 'Trader: the deepest reasoning, unlimited analyses' },
+      ]
+    : [
+        { icon: 'newspaper-outline' as const, text: 'Trader reads more sources per analysis' },
+        { icon: 'layers-outline' as const, text: 'The deepest reasoning depth — second-order effects and timing' },
+        { icon: 'infinite-outline' as const, text: 'No daily cap — analyze any market, any time' },
+      ];
+  const highlight: 'pro' | 'trader' = isFree ? 'pro' : 'trader';
+  const cta = isFree ? 'See Pro & Trader' : 'Upgrade to Trader';
+
+  return (
+    <View style={[styles.card, styles.upsellCard]}>
+      <View style={styles.edgeHead}>
+        <Ionicons name="lock-open-outline" size={14} color={colors.accent} />
+        <Text style={styles.edgeLabel}>{kicker}</Text>
+      </View>
+      <Text style={styles.upsellTitle}>{title}</Text>
+      <View style={{ gap: spacing.sm, marginTop: spacing.xs }}>
+        {rows.map((r) => (
+          <View key={r.text} style={styles.listRow}>
+            <Ionicons name={r.icon} size={14} color={colors.accent} style={{ marginTop: 2 }} />
+            <Text style={[styles.cardBody, { flex: 1, fontSize: 13 }]}>{r.text}</Text>
+          </View>
+        ))}
+      </View>
+      <Pressable
+        style={[styles.explainBtn, { marginTop: spacing.md }]}
+        onPress={() => onUpgrade(highlight)}
+      >
+        <Text style={styles.explainText}>{cta}</Text>
+      </Pressable>
     </View>
   );
 }
@@ -669,8 +735,7 @@ const styles = StyleSheet.create({
     marginTop: spacing.xs,
   },
   externalText: { fontSize: 13, fontWeight: '700' },
-  brandGlyph: { width: 18, height: 18, borderRadius: 5, alignItems: 'center', justifyContent: 'center' },
-  brandGlyphText: { fontSize: 11, fontWeight: '700', color: colors.bg },
+  brandGlyph: { width: 20, height: 20, borderRadius: 5, alignItems: 'center', justifyContent: 'center' },
   aiHeader: { marginTop: spacing.md, gap: 2 },
   sectionKicker: { ...typography.kicker, color: colors.textFaint },
   aiDisclaimer: { fontSize: 11, color: colors.textFaint },
@@ -681,6 +746,8 @@ const styles = StyleSheet.create({
   },
   gateTitle: { ...typography.heading, color: colors.text },
   edgeCard: { borderColor: colors.accent, backgroundColor: colors.accentDim, gap: spacing.sm },
+  upsellCard: { borderColor: colors.borderStrong, marginTop: spacing.md },
+  upsellTitle: { ...typography.bodyStrong, color: colors.text, lineHeight: 20 },
   bone: { height: 12, borderRadius: 6, backgroundColor: colors.accent },
   skeletonStatus: { ...typography.caption, color: colors.accent, textAlign: 'center' },
   edgeHead: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },

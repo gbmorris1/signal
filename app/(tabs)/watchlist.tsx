@@ -14,18 +14,18 @@ import { useWatchlist } from '@/state/watchlist';
 import { signedPct } from '@/lib/format';
 import type { Market } from '@/types';
 
-type SortKey = 'recent' | 'mover' | 'volume';
-const SORTS: { key: SortKey; label: string }[] = [
-  { key: 'recent', label: 'Recent' },
-  { key: 'mover', label: 'Movers' },
-  { key: 'volume', label: 'Volume' },
+type PlatformFilter = 'all' | 'polymarket' | 'kalshi';
+const FILTERS: { key: PlatformFilter; label: string }[] = [
+  { key: 'all', label: 'All' },
+  { key: 'polymarket', label: 'Polymarket' },
+  { key: 'kalshi', label: 'Kalshi' },
 ];
 
 export default function WatchlistScreen() {
   const source = useMemo(() => getMarketSource(), []);
   const { ids, toggle } = useWatchlist();
   const [refreshing, setRefreshing] = useState(false);
-  const [sort, setSort] = useState<SortKey>('recent');
+  const [filter, setFilter] = useState<PlatformFilter>('all');
   const { data = [], isLoading, refetch } = useQuery<Market[]>({
     queryKey: ['markets', 'all'],
     queryFn: () => source.listMarkets(),
@@ -38,14 +38,20 @@ export default function WatchlistScreen() {
     setRefreshing(false);
   }, [refetch]);
 
-  // `ids` is insertion-ordered (oldest first); "Recent" wants newest first.
-  const saved = useMemo(() => {
+  // Everything watched, newest-first (`ids` is insertion-ordered, oldest first).
+  const watched = useMemo(() => {
     const list = data.filter((m: Market) => ids.includes(m.id));
-    if (sort === 'mover') return [...list].sort((a, b) => Math.abs(b.change24h) - Math.abs(a.change24h));
-    if (sort === 'volume') return [...list].sort((a, b) => b.volume - a.volume);
     const order = new Map(ids.map((id, i) => [id, i]));
     return [...list].sort((a, b) => (order.get(b.id) ?? 0) - (order.get(a.id) ?? 0));
-  }, [data, ids, sort]);
+  }, [data, ids]);
+
+  // Only offer the platform filter when the watchlist actually spans both.
+  const platforms = useMemo(() => new Set(watched.map((m) => m.platform)), [watched]);
+  const showFilter = platforms.size > 1;
+  const saved = useMemo(
+    () => (filter === 'all' ? watched : watched.filter((m) => m.platform === filter)),
+    [watched, filter],
+  );
 
   function remove(market: Market) {
     void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -61,30 +67,32 @@ export default function WatchlistScreen() {
         <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.accent} />
       }
       ListHeaderComponent={
-        saved.length > 0 ? (
+        watched.length > 0 ? (
           <View style={styles.header}>
             <Text style={styles.kicker}>
-              {saved.length} {saved.length === 1 ? 'MARKET' : 'MARKETS'} WATCHED
+              {watched.length} {watched.length === 1 ? 'MARKET' : 'MARKETS'} WATCHED
             </Text>
-            <View style={styles.segment}>
-              {SORTS.map((s) => {
-                const active = sort === s.key;
-                return (
-                  <Pressable
-                    key={s.key}
-                    style={[styles.segmentTab, active && styles.segmentActive]}
-                    onPress={() => {
-                      if (!active) void Haptics.selectionAsync();
-                      setSort(s.key);
-                    }}
-                  >
-                    <Text style={[styles.segmentText, active && styles.segmentTextActive]}>
-                      {s.label}
-                    </Text>
-                  </Pressable>
-                );
-              })}
-            </View>
+            {showFilter && (
+              <View style={styles.segment}>
+                {FILTERS.map((f) => {
+                  const active = filter === f.key;
+                  return (
+                    <Pressable
+                      key={f.key}
+                      style={[styles.segmentTab, active && styles.segmentActive]}
+                      onPress={() => {
+                        if (!active) void Haptics.selectionAsync();
+                        setFilter(f.key);
+                      }}
+                    >
+                      <Text style={[styles.segmentText, active && styles.segmentTextActive]}>
+                        {f.label}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            )}
           </View>
         ) : null
       }
