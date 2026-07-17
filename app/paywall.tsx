@@ -3,6 +3,7 @@ import { Pressable, Text, View, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import * as Haptics from 'expo-haptics';
 import { colors, radius, spacing, typography, buttonPrimary, shadows } from '@/theme';
 import { LEGAL, SUBSCRIPTION_DISCLOSURE, openUrl } from '@/lib/legal';
 import { PLANS, FEATURE_DETAILS } from '@/data/subscriptions';
@@ -22,6 +23,7 @@ export default function PaywallScreen() {
     highlight === 'trader' ? 'trader' : 'pro',
   );
   const [busy, setBusy] = useState(false);
+  const [success, setSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -42,19 +44,31 @@ export default function PaywallScreen() {
       // fresh purchase of a trial-bearing package starts in trial.
       track('trial_start', { plan: selected });
       track('purchase_complete', { plan: selected });
-      router.back();
+      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      setSuccess(true);
+      setBusy(false);
+      // Brief confirmation beat before leaving — the highest-stakes tap in
+      // the app deserves an acknowledgment, not an instant navigate-away.
+      setTimeout(() => router.back(), 650);
+      return;
     } catch (e) {
       // User cancelled or store/offering not configured. Stay on the paywall.
+      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       setError(e instanceof Error ? e.message : 'Purchase did not complete.');
-    } finally {
-      setBusy(false);
     }
+    setBusy(false);
   }
 
   return (
     <SafeAreaView style={styles.safe}>
       <View style={styles.content}>
-        <Pressable style={styles.closeX} hitSlop={12} onPress={() => router.back()}>
+        <Pressable
+          style={styles.closeX}
+          hitSlop={12}
+          onPress={() => router.back()}
+          accessibilityRole="button"
+          accessibilityLabel="Close"
+        >
           <Ionicons name="close" size={20} color={colors.textFaint} />
         </Pressable>
 
@@ -110,9 +124,15 @@ export default function PaywallScreen() {
 
         <View style={styles.footer}>
           {error && <Text style={styles.error}>{error}</Text>}
-          <Pressable style={styles.buy} disabled={isCurrent || busy} onPress={buy}>
+          <Pressable style={styles.buy} disabled={isCurrent || busy || success} onPress={buy}>
             <Text style={styles.buyText}>
-              {isCurrent ? 'Current plan' : busy ? 'Processing…' : `Try ${plan.name} free for 3 days`}
+              {success
+                ? 'Success ✓'
+                : isCurrent
+                  ? 'Current plan'
+                  : busy
+                    ? 'Processing…'
+                    : `Try ${plan.name} free for 3 days`}
             </Text>
           </Pressable>
           {!isCurrent && <Text style={styles.disclosure}>{SUBSCRIPTION_DISCLOSURE}</Text>}

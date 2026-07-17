@@ -131,7 +131,13 @@ function WatchRow({ market, onRemove }: { market: Market; onRemove: () => void }
             {signedPct(market.change24h)} today
           </Text>
         )}
-        <Pressable hitSlop={10} onPress={onRemove} style={styles.trash}>
+        <Pressable
+          hitSlop={10}
+          onPress={onRemove}
+          style={styles.trash}
+          accessibilityRole="button"
+          accessibilityLabel="Remove from watchlist"
+        >
           <Ionicons name="close" size={16} color={colors.textFaint} />
         </Pressable>
       </View>

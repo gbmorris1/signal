@@ -112,13 +112,21 @@ export default function DiscoverScreen() {
               returnKeyType="search"
             />
             {searching && (
-              <Pressable hitSlop={8} onPress={() => setQuery('')}>
+              <Pressable
+                hitSlop={8}
+                onPress={() => setQuery('')}
+                accessibilityRole="button"
+                accessibilityLabel="Clear search"
+              >
                 <Ionicons name="close-circle" size={16} color={colors.textFaint} />
               </Pressable>
             )}
           </View>
 
-          {!searching && (
+          {/* Folded into the Movers segment rather than always-on — four
+              stacked filter rows above the first result was too much chrome
+              on every visit to Trending/AI picks. */}
+          {!searching && section === 'movers' && (
             <View style={styles.railBlock}>
               <Text style={styles.railLabel}>ON THE MOVE</Text>
               <ScrollView
@@ -236,7 +244,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
   },
   search: { flex: 1, paddingVertical: spacing.md, color: colors.text, ...typography.body },
-  railBlock: { minHeight: 132 }, // fixed footprint: the header never reflows
+  railBlock: { minHeight: 132 }, // stable height while the rail's own data loads
   railLabel: { ...typography.kicker, color: colors.textFaint, marginBottom: spacing.sm },
   rail: { gap: spacing.sm, paddingRight: spacing.lg },
   railCard: {

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Pressable, ScrollView, Text, View, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
+import * as Haptics from 'expo-haptics';
 import { colors, radius, spacing, typography, buttonPrimary } from '@/theme';
 import { useAuth } from '@/state/auth';
 import type { Category, ExperienceLevel } from '@/types';
@@ -40,6 +41,7 @@ export default function OnboardingScreen() {
     setBusy(true);
     await saveOnboarding({ interests, experience: level });
     setBusy(false);
+    void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     router.replace('/(tabs)');
   }
 
@@ -69,7 +71,10 @@ export default function OnboardingScreen() {
             <Pressable
               style={[styles.primary, interests.length === 0 && styles.disabled]}
               disabled={interests.length === 0}
-              onPress={() => setStep(1)}
+              onPress={() => {
+                void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                setStep(1);
+              }}
             >
               <Text style={styles.primaryText}>Continue</Text>
             </Pressable>

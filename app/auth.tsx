@@ -11,6 +11,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import * as Haptics from 'expo-haptics';
 import { colors, radius, spacing, typography, buttonPrimary, shadows } from '@/theme';
 import { BrandMark } from '@/components/BrandMark';
 import { ExampleEdge } from '@/components/ExampleEdge';
@@ -80,10 +81,14 @@ export default function AuthScreen() {
     const res = mode === 'signup' ? await signUp(email, password) : await signIn(email, password);
     setBusy(false);
     if (res.error) {
+      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       setError(res.error);
-    } else if (mode === 'signup') {
-      track('signup_completed', {});
-      if ('needsConfirmation' in res && res.needsConfirmation) setSentTo(email);
+    } else {
+      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      if (mode === 'signup') {
+        track('signup_completed', {});
+        if ('needsConfirmation' in res && res.needsConfirmation) setSentTo(email);
+      }
     }
   }
 
@@ -182,7 +187,12 @@ export default function AuthScreen() {
               onChangeText={setPassword}
               style={styles.input}
             />
-            <Pressable hitSlop={10} onPress={() => setShowPassword((v) => !v)}>
+            <Pressable
+              hitSlop={10}
+              onPress={() => setShowPassword((v) => !v)}
+              accessibilityRole="button"
+              accessibilityLabel={showPassword ? 'Hide password' : 'Show password'}
+            >
               <Ionicons
                 name={showPassword ? 'eye-off-outline' : 'eye-outline'}
                 size={16}

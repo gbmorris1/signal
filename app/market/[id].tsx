@@ -209,7 +209,13 @@ export default function MarketDetailScreen() {
           <PlatformBadge platform={market.platform} size="md" />
           <SignalChip signal={market.signal} />
           <View style={{ flex: 1 }} />
-          <Pressable hitSlop={10} onPress={onToggleSave} style={[styles.saveStar, saved && styles.saveStarOn]}>
+          <Pressable
+            hitSlop={10}
+            onPress={onToggleSave}
+            style={[styles.saveStar, saved && styles.saveStarOn]}
+            accessibilityRole="button"
+            accessibilityLabel={saved ? 'Remove from watchlist' : 'Save to watchlist'}
+          >
             <Ionicons name={saved ? 'star' : 'star-outline'} size={17} color={saved ? colors.bg : colors.textMuted} />
           </Pressable>
         </View>
