@@ -4,7 +4,8 @@ import { router, useLocalSearchParams, Stack } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import { colors, radius, spacing, typography } from '@/theme';
 import { getMarketSource, getCombinedSource } from '@/services/markets';
-import { generateAnalysis } from '@/services/ai';
+import { generateAnalysis, fetchCachedAnalysis, firstSentence } from '@/services/ai';
+import { track } from '@/lib/analytics';
 import { ProbabilityChart } from '@/components/ProbabilityChart';
 import { ScoreExplainer } from '@/components/ScoreExplainer';
 import { OutcomeSplit } from '@/components/OutcomeSplit';
@@ -27,6 +28,7 @@ export default function MarketDetailScreen() {
   const [analysis, setAnalysis] = useState<AIAnalysis | null>(null);
   const [loadingAI, setLoadingAI] = useState(false);
   const [gated, setGated] = useState(false);
+  const [teaser, setTeaser] = useState<string | null>(null);
   const [showScore, setShowScore] = useState(false);
 
   const { data: market } = useQuery<Market | null>({
@@ -62,17 +64,28 @@ export default function MarketDetailScreen() {
 
   async function runAnalysis() {
     if (!market) return;
-    // Enforce the free-tier daily analysis limit.
+    track('explain_click', { market_id: market.id, tier: entitlements.tier });
+    // Enforce the daily analysis limit for this tier.
     const used = await getAiUsageToday();
     if (used >= entitlements.dailyAiAnalyses) {
       setGated(true);
+      track('gated_impression', { market_id: market.id, tier: entitlements.tier });
+      // Teaser comes from the shared cache only — never a fresh model call.
+      const cached = await fetchCachedAnalysis(market.id);
+      if (cached) setTeaser(firstSentence(cached.summary));
       return;
     }
     setLoadingAI(true);
     try {
-      const result = await generateAnalysis(market, snapshots);
+      // Depth follows the tier: free=shallow teaser, pro=standard, trader=deep.
+      const result = await generateAnalysis(market, snapshots, entitlements.aiDepth);
       await incrementAiUsage();
       setAnalysis(result);
+      track('analysis_viewed', {
+        market_id: market.id,
+        tier: entitlements.tier,
+        depth: entitlements.aiDepth,
+      });
       void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } finally {
       setLoadingAI(false);
@@ -178,13 +191,32 @@ export default function MarketDetailScreen() {
       </Text>
       {gated ? (
         <View style={styles.gateCard}>
-          <Text style={styles.gateTitle}>Daily AI limit reached</Text>
+          {teaser && (
+            <View style={styles.teaserWrap}>
+              <Text style={styles.teaserText}>{teaser}</Text>
+              {/* obscured continuation implies the rest of the report */}
+              <Text style={styles.teaserBlur} numberOfLines={2}>
+                The full report covers the bull and bear cases, why the market moved, upcoming
+                catalysts with timing, and the model's own probability estimate…
+              </Text>
+              <View style={styles.teaserFade} />
+            </View>
+          )}
+          <Text style={styles.gateTitle}>
+            {teaser ? 'Unlock the full report' : 'Daily AI limit reached'}
+          </Text>
           <Text style={styles.gateBody}>
             You've used all {entitlements.dailyAiAnalyses} of today's analyses on the{' '}
-            {entitlements.tier} plan. Upgrade for more.
+            {entitlements.tier} plan.
           </Text>
-          <Pressable style={styles.explainBtn} onPress={() => router.push('/paywall?highlight=pro')}>
-            <Text style={styles.explainText}>Upgrade</Text>
+          <Pressable
+            style={styles.explainBtn}
+            onPress={() => {
+              track('paywall_view', { source: 'gate', market_id: market.id });
+              router.push('/paywall?highlight=pro');
+            }}
+          >
+            <Text style={styles.explainText}>Try Pro free for 3 days</Text>
           </Pressable>
         </View>
       ) : !analysis ? (
@@ -356,6 +388,20 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   gateTitle: { ...typography.heading, color: colors.text },
+  teaserWrap: { position: 'relative', gap: spacing.xs, marginBottom: spacing.xs },
+  teaserText: { ...typography.body, color: colors.text, lineHeight: 21 },
+  teaserBlur: { ...typography.body, color: colors.textFaint, lineHeight: 21, opacity: 0.45 },
+  teaserFade: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    height: 34,
+    backgroundColor: 'transparent',
+    borderBottomWidth: 34,
+    borderBottomColor: colors.surface,
+    opacity: 0.85,
+  },
   gateBody: { ...typography.body, color: colors.textMuted, lineHeight: 21, textTransform: 'capitalize' },
   metaRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 2 },
   metaLabel: { color: colors.textMuted, ...typography.body },

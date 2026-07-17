@@ -101,6 +101,16 @@ create table if not exists subscriptions (
   updated_at  timestamptz not null default now()
 );
 
+-- ── events (product analytics; written by the app, queried in SQL) ──────────
+create table if not exists events (
+  id         bigserial primary key,
+  user_id    uuid,                              -- null for demo/anonymous
+  name       text not null,                     -- e.g. 'paywall_view'
+  props      jsonb not null default '{}',
+  created_at timestamptz not null default now()
+);
+create index if not exists events_name_time_idx on events(name, created_at desc);
+
 -- ── Row Level Security ──────────────────────────────────────────────────────
 alter table users         enable row level security;
 alter table watchlists    enable row level security;
@@ -115,6 +125,10 @@ create policy "own profile"        on users         for all    using (auth.uid()
 create policy "own watchlist"      on watchlists    for all    using (auth.uid() = user_id) with check (auth.uid() = user_id);
 create policy "own alerts"         on alerts        for all    using (auth.uid() = user_id) with check (auth.uid() = user_id);
 create policy "own subscription"   on subscriptions for all    using (auth.uid() = user_id) with check (auth.uid() = user_id);
+alter table events enable row level security;
+-- Insert-only from clients (anyone may log; nobody may read/modify from the app).
+create policy "events insertable" on events for insert with check (true);
+
 create policy "markets readable"   on markets          for select using (true);
 create policy "snapshots readable" on market_snapshots for select using (true);
 create policy "analysis readable"  on ai_analysis      for select using (true);

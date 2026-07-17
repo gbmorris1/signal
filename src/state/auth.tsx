@@ -9,6 +9,7 @@ import {
 } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getSupabase, hasSupabase } from '@/lib/supabase';
+import { setAnalyticsUser } from '@/lib/analytics';
 import type { Category, ExperienceLevel, UserPreferences, UserProfile } from '@/types';
 
 const PROFILE_KEY = 'signal.profile.v1';
@@ -45,6 +46,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [demo, setDemo] = useState(false);
+
+  // Keep analytics events attributed to the signed-in user.
+  useEffect(() => {
+    setAnalyticsUser(profile?.id ?? null);
+  }, [profile?.id]);
 
   // Restore session on boot + react to auth changes (e.g. session appearing
   // after the user confirms their email, or a token refresh).

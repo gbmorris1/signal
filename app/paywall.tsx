@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, Text, View, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 import { colors, radius, spacing, typography } from '@/theme';
 import { PLANS, FEATURE_DETAILS } from '@/data/subscriptions';
 import { useEntitlement } from '@/state/entitlement';
+import { track } from '@/lib/analytics';
 import type { PlanTier } from '@/types';
 
 export default function PaywallScreen() {
@@ -14,11 +15,21 @@ export default function PaywallScreen() {
   const [error, setError] = useState<string | null>(null);
   const [expanded, setExpanded] = useState<PlanTier | null>(null);
 
+  useEffect(() => {
+    track('paywall_view', { highlight: highlight ?? 'none' });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   async function buy(t: Exclude<PlanTier, 'free'>) {
     setBusy(t);
     setError(null);
+    track('purchase_start', { plan: t });
     try {
       await purchase(t);
+      // The 3-day trial itself is configured on the RevenueCat offering; a
+      // fresh purchase of a trial-bearing package starts in trial.
+      track('trial_start', { plan: t });
+      track('purchase_complete', { plan: t });
       router.back();
     } catch (e) {
       // User cancelled or store/offering not configured — stay on the paywall.
@@ -45,7 +56,10 @@ export default function PaywallScreen() {
             <Pressable
               key={p.tier}
               style={[styles.plan, isHighlight && styles.planHighlight]}
-              onPress={() => setExpanded(isExpanded ? null : p.tier)}
+              onPress={() => {
+                if (!isExpanded) track('plan_select', { plan: p.tier });
+                setExpanded(isExpanded ? null : p.tier);
+              }}
             >
               <View style={styles.planHead}>
                 <Text style={styles.planName}>{p.name}</Text>
@@ -68,9 +82,18 @@ export default function PaywallScreen() {
                 onPress={() => buy(p.tier as Exclude<PlanTier, 'free'>)}
               >
                 <Text style={styles.buyText}>
-                  {isCurrent ? 'Current plan' : busy === p.tier ? 'Processing…' : `Choose ${p.name}`}
+                  {isCurrent
+                    ? 'Current plan'
+                    : busy === p.tier
+                      ? 'Processing…'
+                      : `Try ${p.name} free for 3 days`}
                 </Text>
               </Pressable>
+              {!isCurrent && (
+                <Text style={styles.trialNote}>
+                  Then {p.priceLabel}. Cancel anytime before the trial ends.
+                </Text>
+              )}
             </Pressable>
           );
         })}
@@ -119,6 +142,7 @@ const styles = StyleSheet.create({
   buy: { backgroundColor: colors.accent, borderRadius: radius.md, paddingVertical: spacing.md, alignItems: 'center', marginTop: spacing.md },
   buyOwned: { backgroundColor: colors.surfaceElevated },
   buyText: { color: colors.bg, fontWeight: '700' },
+  trialNote: { fontSize: 11, color: colors.textFaint, textAlign: 'center', marginTop: spacing.xs },
   error: { ...typography.caption, color: colors.down, textAlign: 'center' },
   restore: { alignItems: 'center', paddingVertical: spacing.sm },
   restoreText: { color: colors.accent, fontWeight: '600' },

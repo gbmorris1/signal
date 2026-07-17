@@ -41,6 +41,25 @@ const FREE_MODELS = [
 const OPENROUTER_MODELS = AI_MODEL_ENV ? [AI_MODEL_ENV] : FREE_MODELS;
 const ANTHROPIC_MODEL = AI_MODEL_ENV ?? 'claude-sonnet-5';
 
+// Depth tiers: entitlement-mapped on the client. Shallow = cheap teaser,
+// standard = full report, deep = extended report. Token caps bound cost.
+type Depth = 'shallow' | 'standard' | 'deep';
+const DEPTH_CONFIG: Record<Depth, { maxTokens: number; extra: string }> = {
+  shallow: {
+    maxTokens: 300,
+    extra: 'Keep every field to ONE short sentence; max 2 catalysts and 2 risk_factors.',
+  },
+  standard: { maxTokens: 1024, extra: '' },
+  deep: {
+    maxTokens: 2048,
+    extra:
+      'Go deeper: 3-4 sentences for bull_case/bear_case, cover second-order effects, and include up to 6 catalysts with rough timing.',
+  },
+};
+function asDepth(v: unknown): Depth {
+  return v === 'shallow' || v === 'deep' ? v : 'standard';
+}
+
 interface Market {
   id: string;
   title: string;
@@ -50,8 +69,8 @@ interface Market {
   volume: number;
 }
 
-function snapshotHash(m: Market): string {
-  return `${m.id}:${m.probability.toFixed(3)}:${m.change24h.toFixed(3)}`;
+function snapshotHash(m: Market, depth: Depth): string {
+  return `${m.id}:${m.probability.toFixed(3)}:${m.change24h.toFixed(3)}:${depth}`;
 }
 
 const SYSTEM = `You are a prediction-market analyst writing for a professional
@@ -127,7 +146,8 @@ function jsonResponse(body: unknown, status = 200): Response {
 }
 
 /** Call the configured provider and return the raw model text. */
-async function callModel(market: Market, history?: Snapshot[]): Promise<string> {
+async function callModel(market: Market, history: Snapshot[] | undefined, depth: Depth): Promise<string> {
+  const cfg = DEPTH_CONFIG[depth];
   if (PROVIDER === 'openrouter') {
     let lastErr = 'no models tried';
     // Try each candidate model; fall through on rate-limit (429).
@@ -142,10 +162,10 @@ async function callModel(market: Market, history?: Snapshot[]): Promise<string> 
         },
         body: JSON.stringify({
           model,
-          max_tokens: 1024,
+          max_tokens: cfg.maxTokens,
           temperature: 0.4,
           messages: [
-            { role: 'system', content: SYSTEM },
+            { role: 'system', content: SYSTEM + (cfg.extra ? `\n\nDEPTH: ${cfg.extra}` : '') },
             { role: 'user', content: userPrompt(market, history) },
           ],
         }),
@@ -173,8 +193,8 @@ async function callModel(market: Market, history?: Snapshot[]): Promise<string> 
     },
     body: JSON.stringify({
       model: ANTHROPIC_MODEL,
-      max_tokens: 1024,
-      system: SYSTEM,
+      max_tokens: cfg.maxTokens,
+      system: SYSTEM + (cfg.extra ? `\n\nDEPTH: ${cfg.extra}` : ''),
       messages: [{ role: 'user', content: userPrompt(market, history) }],
     }),
   });
@@ -191,17 +211,19 @@ Deno.serve(async (req: Request) => {
 
   let market: Market;
   let history: Snapshot[] | undefined;
+  let depth: Depth = 'standard';
   try {
     const body = await req.json();
     market = body.market;
     history = Array.isArray(body.history) ? body.history : undefined;
+    depth = asDepth(body.depth);
     if (!market?.id || !market?.title) throw new Error('missing market');
   } catch {
     return jsonResponse({ error: 'invalid body' }, 400);
   }
 
   const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
-  const hash = snapshotHash(market);
+  const hash = snapshotHash(market, depth);
 
   // 1) Cache hit?
   const { data: cached, error: readErr } = await supabase
@@ -227,7 +249,7 @@ Deno.serve(async (req: Request) => {
   // 2) Call the model.
   let text: string;
   try {
-    text = await callModel(market, history);
+    text = await callModel(market, history, depth);
   } catch (e) {
     return jsonResponse({ error: String(e) }, 502);
   }

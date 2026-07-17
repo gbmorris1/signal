@@ -38,11 +38,14 @@ function fallbackAnalysis(market: Market): AIAnalysis {
  * holds the Anthropic key and returns Zod-validated structured JSON. In dev /
  * without keys, returns a canned analysis so the app remains fully functional.
  */
+export type AnalysisDepth = 'shallow' | 'standard' | 'deep';
+
 export async function generateAnalysis(
   market: Market,
   history: MarketSnapshot[],
+  depth: AnalysisDepth = 'standard',
 ): Promise<AIAnalysis> {
-  const key = snapshotHash(market, history);
+  const key = `${snapshotHash(market, history)}:${depth}`;
   const hit = cache.get(key);
   if (hit) return hit;
 
@@ -54,7 +57,7 @@ export async function generateAnalysis(
       const res = await fetch(`${supabaseUrl}/functions/v1/analyze-market`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ market, history }),
+        body: JSON.stringify({ market, history, depth }),
       });
       const json = await res.json();
       const parsed = parseAIAnalysis(json);
@@ -77,4 +80,40 @@ export async function generateAnalysis(
 
   cache.set(key, result);
   return result;
+}
+
+/**
+ * Most recent CACHED analysis for a market, any snapshot/depth — used for the
+ * gated teaser. Never triggers a model call; returns null when nothing cached.
+ */
+export async function fetchCachedAnalysis(marketId: string): Promise<AIAnalysis | null> {
+  const { getSupabase } = await import('@/lib/supabase');
+  const supabase = getSupabase();
+  if (!supabase) return MOCK_ANALYSIS[marketId] ?? null;
+  const { data } = await supabase
+    .from('ai_analysis')
+    .select('*')
+    .eq('market_id', marketId)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (!data) return null;
+  return {
+    marketId,
+    summary: data.summary,
+    bullCase: data.bull_case,
+    bearCase: data.bear_case,
+    whyChanged: data.why_changed,
+    catalysts: data.catalysts ?? [],
+    riskFactors: data.risk_factors ?? [],
+    confidence: data.confidence ?? 'medium',
+    aiProbabilityEstimate: data.ai_probability_estimate,
+    createdAt: data.created_at,
+  };
+}
+
+/** First sentence of a summary, for teaser display. */
+export function firstSentence(text: string): string {
+  const m = text.match(/^.*?[.!?](\s|$)/);
+  return (m ? m[0] : text).trim();
 }

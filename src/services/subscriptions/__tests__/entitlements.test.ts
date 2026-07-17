@@ -5,7 +5,13 @@ describe('entitlements', () => {
     const e = entitlementsFor('free');
     expect(e.alertsEnabled).toBe(false);
     expect(e.personalizedFeed).toBe(false);
-    expect(e.dailyAiAnalyses).toBe(3);
+    expect(e.dailyAiAnalyses).toBe(1);
+    expect(e.aiDepth).toBe('shallow');
+  });
+
+  it('paid tiers get deeper analysis', () => {
+    expect(entitlementsFor('pro').aiDepth).toBe('standard');
+    expect(entitlementsFor('trader').aiDepth).toBe('deep');
   });
 
   it('trader tier is unlimited', () => {

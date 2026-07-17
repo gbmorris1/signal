@@ -1,9 +1,13 @@
 import type { PlanTier } from '@/types';
 
+export type AiDepth = 'shallow' | 'standard' | 'deep';
+
 /** Feature limits per plan. `Infinity` = unlimited. */
 export interface Entitlements {
   tier: PlanTier;
   dailyAiAnalyses: number;
+  /** Analysis depth this tier's model calls run at (bounds AI cost). */
+  aiDepth: AiDepth;
   watchlistLimit: number;
   alertsEnabled: boolean;
   personalizedFeed: boolean;
@@ -12,7 +16,8 @@ export interface Entitlements {
 
 const TABLE: Record<PlanTier, Omit<Entitlements, 'tier'>> = {
   free: {
-    dailyAiAnalyses: 3,
+    dailyAiAnalyses: 1,
+    aiDepth: 'shallow',
     watchlistLimit: 5,
     alertsEnabled: false,
     personalizedFeed: false,
@@ -20,6 +25,7 @@ const TABLE: Record<PlanTier, Omit<Entitlements, 'tier'>> = {
   },
   pro: {
     dailyAiAnalyses: 25,
+    aiDepth: 'standard',
     watchlistLimit: 50,
     alertsEnabled: true,
     personalizedFeed: true,
@@ -27,6 +33,7 @@ const TABLE: Record<PlanTier, Omit<Entitlements, 'tier'>> = {
   },
   trader: {
     dailyAiAnalyses: Infinity,
+    aiDepth: 'deep',
     watchlistLimit: Infinity,
     alertsEnabled: true,
     personalizedFeed: true,
