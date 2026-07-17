@@ -105,9 +105,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         plan: data.plan ?? 'free',
       });
     } else {
-      // First login: create a profile row.
+      // First login: create a profile row (upsert, so a retry never dup-keys).
       const fresh = blankProfile(id, email);
-      await supabase.from('users').insert({ id, email, onboarded: false });
+      const { error } = await supabase.from('users').upsert({ id, email, onboarded: false });
+      if (error) console.warn('profile create failed:', error.message);
       setProfile(fresh);
     }
   }, []);
@@ -118,6 +119,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (supabase) {
       const { data, error } = await supabase.auth.signUp({ email, password });
       if (error) return { error: error.message };
+      // Existing-account gate: to prevent email enumeration, Supabase returns a
+      // fake "success" for emails that already have a confirmed account. The
+      // tell is an empty identities array on the returned user.
+      if (data.user && (data.user.identities?.length ?? 0) === 0) {
+        return { error: 'An account with this email already exists. Sign in instead.' };
+      }
       // When email confirmation is required, Supabase returns a user but no
       // session. Don't create the profile row yet (RLS needs an authed session);
       // the onAuthStateChange listener picks it up once they confirm + sign in.
@@ -164,21 +171,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const saveOnboarding = useCallback<AuthState['saveOnboarding']>(
     async ({ interests, experience }: { interests: Category[]; experience: ExperienceLevel }) => {
-      setProfile((prev) => {
-        const base = prev ?? blankProfile(`mock-${Date.now()}`, null);
-        const next: UserProfile = { ...base, interests, experience, onboarded: true };
-        void persistLocal(next);
-        const supabase = getSupabase();
-        if (supabase) {
-          void supabase
-            .from('users')
-            .update({ interests, experience, onboarded: true })
-            .eq('id', next.id);
-        }
-        return next;
-      });
+      // Compute next profile synchronously so we can AWAIT the DB write.
+      // (This used to be fire-and-forget inside the state updater; when the
+      // write failed, onboarded stayed false in the DB and the interests
+      // screen came back on every sign-in.)
+      const base = profile ?? blankProfile(`mock-${Date.now()}`, null);
+      const next: UserProfile = { ...base, interests, experience, onboarded: true };
+      setProfile(next);
+      await persistLocal(next);
+
+      const supabase = getSupabase();
+      if (supabase && !next.id.startsWith('mock-')) {
+        // Upsert so this succeeds even if the profile row was never created.
+        const { error } = await supabase.from('users').upsert({
+          id: next.id,
+          email: next.email,
+          interests,
+          experience,
+          onboarded: true,
+        });
+        if (error) console.warn('onboarding save failed:', error.message);
+      }
     },
-    [persistLocal],
+    [persistLocal, profile],
   );
 
   const setPushToken = useCallback<AuthState['setPushToken']>(async (token) => {
