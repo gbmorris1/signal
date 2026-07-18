@@ -57,6 +57,7 @@ function AuthGate() {
       <Stack.Screen name="onboarding" options={{ headerShown: false }} />
       <Stack.Screen name="paywall" options={{ presentation: 'modal', headerShown: false }} />
       <Stack.Screen name="market/[id]" options={{ title: 'Market', headerBackTitle: 'Back' }} />
+      <Stack.Screen name="spreads" options={{ title: 'Cross-platform spreads', headerBackTitle: 'Back' }} />
     </Stack>
   );
 }

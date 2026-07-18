@@ -135,6 +135,20 @@ export default function DiscoverScreen() {
             )}
           </View>
 
+          {!searching && (
+            <Pressable
+              style={styles.spreadsBtn}
+              onPress={() => router.push('/spreads')}
+              accessibilityRole="button"
+              accessibilityLabel="View cross-platform spreads"
+            >
+              <Ionicons name="swap-horizontal" size={15} color={colors.accent} />
+              <Text style={styles.spreadsText}>Cross-platform spreads</Text>
+              <View style={{ flex: 1 }} />
+              <Ionicons name="chevron-forward" size={14} color={colors.textFaint} />
+            </Pressable>
+          )}
+
           {/* Folded into the Movers segment rather than always-on — four
               stacked filter rows above the first result was too much chrome
               on every visit to Trending/AI picks. */}
@@ -280,6 +294,18 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
   },
   search: { flex: 1, paddingVertical: spacing.md, color: colors.text, ...typography.body },
+  spreadsBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderWidth: 1,
+    borderRadius: radius.md,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+  },
+  spreadsText: { ...typography.bodyStrong, color: colors.text, fontSize: 14 },
   railBlock: { minHeight: 132 }, // stable height while the rail's own data loads
   railLabel: { ...typography.kicker, color: colors.textFaint, marginBottom: spacing.sm },
   rail: { gap: spacing.sm, paddingRight: spacing.lg },

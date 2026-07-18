@@ -52,6 +52,53 @@ export class CombinedSource implements MarketDataSource {
       .slice(0, 2)
       .map((x) => x.m);
   }
+
+  /**
+   * Cross-platform spread scanner. Pairs each Polymarket market with its best
+   * Kalshi match (higher overlap bar than findComparables — a wrong pairing
+   * would show a phantom "spread"), keeps pairs whose implied probabilities
+   * differ by >= minGap, and ranks by gap. Each Kalshi market is used once.
+   * Note: a wide spread often reflects DIFFERENT resolution criteria between
+   * venues, not free money — the UI frames these as research, not arbitrage.
+   */
+  async findSpreads(minGap = 0.04): Promise<SpreadPair[]> {
+    const all = await this.listMarkets();
+    const poly = all.filter((m) => m.platform === 'polymarket');
+    const kalshi = all.filter((m) => m.platform === 'kalshi');
+    if (poly.length === 0 || kalshi.length === 0) return [];
+
+    const kalshiKeys = kalshi.map((k) => ({ k, keys: titleKeywords(k.title) }));
+    const used = new Set<string>();
+    const pairs: SpreadPair[] = [];
+    for (const p of poly) {
+      const pk = titleKeywords(p.title);
+      let best: Market | undefined;
+      let bestScore = 0.6; // stricter than comparables — arb needs real matches
+      for (const { k, keys } of kalshiKeys) {
+        if (k.category !== p.category || used.has(k.id)) continue;
+        const s = overlap(pk, keys);
+        if (s > bestScore) {
+          bestScore = s;
+          best = k;
+        }
+      }
+      if (!best) continue;
+      const gap = Math.abs(p.probability - best.probability);
+      if (gap < minGap) continue;
+      used.add(best.id);
+      // `cheaper` = the venue where YES is priced lower (the side you'd buy).
+      const cheaper = p.probability <= best.probability ? p : best;
+      pairs.push({ polymarket: p, kalshi: best, gapPts: Math.round(gap * 100), cheaper: cheaper.platform });
+    }
+    return pairs.sort((a, b) => b.gapPts - a.gapPts).slice(0, 40);
+  }
+}
+
+export interface SpreadPair {
+  polymarket: Market;
+  kalshi: Market;
+  gapPts: number;
+  cheaper: 'polymarket' | 'kalshi';
 }
 
 const STOP = new Set([

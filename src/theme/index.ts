@@ -28,6 +28,7 @@ export const colors = {
   down: '#FF5A6B',
   downDim: 'rgba(255,90,107,0.14)',
   warn: '#FFB020',
+  warnDim: 'rgba(255,176,32,0.14)',
   // signal chips
   signalOpportunity: '#2FD48C',
   signalWatch: '#22C9F5',
