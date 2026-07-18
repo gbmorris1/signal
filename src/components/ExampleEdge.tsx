@@ -5,12 +5,12 @@ import { colors, radius, spacing, typography, shadows } from '@/theme';
 import { getTrackRecord, type TrackRecord } from '@/services/trackRecord';
 
 // A concrete, real-shaped example shown BEFORE signup so the value lands in
-// seconds. Static sample (not a live call) — it's a teaser, not a promise.
+// seconds. Static sample (not a live call) - it's a teaser, not a promise.
 const SAMPLE = {
   title: 'Will the Fed cut rates in September?',
   market: 0.43,
   oddiq: 0.5,
-  edge: 'The 43% looks low — cooling inflation and a softer labor market lean the Fed toward a cut. Fair value is closer to 50%.',
+  edge: 'The 43% looks low: cooling inflation and a softer labor market lean the Fed toward a cut. Fair value is closer to 50%.',
 };
 
 export function ExampleEdge() {

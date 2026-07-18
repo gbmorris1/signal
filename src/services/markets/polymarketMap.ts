@@ -33,7 +33,7 @@ function parseJsonArray(s: string | undefined): string[] {
   }
 }
 
-// Native platform categories → Signal categories. Checked FIRST — the
+// Native platform categories → Signal categories. Checked FIRST - the
 // platform's own taxonomy beats keyword guessing every time.
 const NATIVE_CATEGORY: Record<string, Category> = {
   // Kalshi
@@ -61,7 +61,7 @@ const NATIVE_CATEGORY: Record<string, Category> = {
 /**
  * Map a platform category/keywords to Signal's fixed category set.
  * Word-boundary matching only. Substring matching put "whether" in crypto
- * (eth) and "rain" in technology (ai) — never again.
+ * (eth) and "rain" in technology (ai) - never again.
  */
 export function mapCategory(input: string | undefined, question: string): Category {
   const native = input?.trim().toLowerCase();
@@ -82,7 +82,7 @@ export function mapCategory(input: string | undefined, question: string): Catego
   return 'world';
 }
 
-// Effectively-settled markets (≥96% / ≤4%) carry no intelligence value — the
+// Effectively-settled markets (≥96% / ≤4%) carry no intelligence value - the
 // question is decided. Feeds filter to live uncertainty.
 const SETTLED_BAND = 0.96;
 export function isLiveProbability(p: number): boolean {
@@ -150,10 +150,15 @@ export function mapPolymarketMarket(raw: PolymarketRaw): Market | null {
   const category = mapCategory(raw.category, question);
   const externalId = String(raw.slug ?? raw.id ?? question);
   const clobTokens = parseJsonArray(raw.clobTokenIds);
-  // Real outcome names when present ("Norris"/"Verstappen"), else Yes/No.
+  // Real outcome names when present ("Norris"/"Verstappen"), else Yes/No. A
+  // single named outcome with no opposite defaults its other side to "Other".
   const outcomes = parseJsonArray(raw.outcomes);
   const outcomeLabels: [string, string] =
-    outcomes.length >= 2 ? [outcomes[0], outcomes[1]] : ['Yes', 'No'];
+    outcomes.length >= 2
+      ? [outcomes[0], outcomes[1]]
+      : outcomes.length === 1
+        ? [outcomes[0], 'Other']
+        : ['Yes', 'No'];
 
   return {
     id: `polymarket:${externalId}`,

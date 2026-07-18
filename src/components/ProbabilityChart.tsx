@@ -95,7 +95,7 @@ export function ProbabilityChart({
   }, [geom?.len]);
 
   // The pan responder is created once, so it must read live values through a
-  // ref — capturing `geom`/`data` directly would freeze the first (empty)
+  // ref - capturing `geom`/`data` directly would freeze the first (empty)
   // render's values and the scrub would never respond.
   const live = useRef({ innerW: 0, count: 0 });
   useEffect(() => {

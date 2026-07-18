@@ -3,7 +3,7 @@ import type { SubscriptionPlan } from '@/types';
 /**
  * Long-form feature explanations shown when a plan is expanded on the
  * paywall. Every bullet here must be something the server actually enforces
- * (see supabase/functions/analyze-market and sync-markets) — don't sell a
+ * (see supabase/functions/analyze-market and sync-markets) - don't sell a
  * capability the app doesn't have yet.
  */
 export const FEATURE_DETAILS: Record<string, string> = {
@@ -14,7 +14,7 @@ export const FEATURE_DETAILS: Record<string, string> = {
   'Alerts': 'Push notifications when a watched market moves sharply, including premium AI-shift alerts explaining the move.',
   'Bigger watchlist': 'Track up to 50 markets, synced to your account across devices.',
   'Unlimited AI analysis': 'No daily cap. Analyze any market, any time.',
-  'Deepest analysis depth': 'The model reads more sources and reasons further before answering — the same depth Free and Pro don’t get.',
+  'Deepest analysis depth': 'The model reads more sources and reasons further before answering, the same depth Free and Pro do not get.',
   'Unlimited watchlist': 'No cap on how many markets you can track.',
 };
 

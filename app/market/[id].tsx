@@ -340,7 +340,8 @@ export default function MarketDetailScreen() {
             Sign up to run AI analysis and save markets to your watchlist.
           </Text>
           <Pressable style={styles.explainBtn} onPress={() => router.push('/auth')}>
-            <Text style={styles.explainText}>Create account</Text>
+            <Ionicons name="sparkles" size={15} color={colors.bg} />
+            <Text style={styles.explainText}>Unlock AI analysis</Text>
           </Pressable>
         </View>
       ) : gated ? (
@@ -412,7 +413,7 @@ export default function MarketDetailScreen() {
   );
 }
 
-/** Animated placeholder while the model runs — reads as "working", not frozen. */
+/** Animated placeholder while the model runs - reads as "working", not frozen. */
 function AnalysisSkeleton({ tier }: { tier: string }) {
   const pulse = useMemo(() => new Animated.Value(0.4), []);
   useEffect(() => {
@@ -527,7 +528,7 @@ function Analysis({
 
 /**
  * After the analysis, show a non-Trader reader exactly what a higher tier
- * would have added to THIS report — concrete depth/news/quota differences,
+ * would have added to THIS report - concrete depth/news/quota differences,
  * not a generic "upgrade now" nag.
  */
 function UpsellCard({
@@ -550,8 +551,8 @@ function UpsellCard({
       ]
     : [
         { icon: 'newspaper-outline' as const, text: 'Trader reads more sources per analysis' },
-        { icon: 'layers-outline' as const, text: 'The deepest reasoning depth — second-order effects and timing' },
-        { icon: 'infinite-outline' as const, text: 'No daily cap — analyze any market, any time' },
+        { icon: 'layers-outline' as const, text: 'The deepest reasoning depth: second-order effects and timing' },
+        { icon: 'infinite-outline' as const, text: 'No daily cap. Analyze any market, any time' },
       ];
   const highlight: 'pro' | 'trader' = isFree ? 'pro' : 'trader';
   const cta = isFree ? 'See Pro & Trader' : 'Upgrade to Trader';

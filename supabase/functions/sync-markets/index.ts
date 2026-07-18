@@ -25,7 +25,7 @@ const AI_SHIFT_THRESHOLD = 0.08;
 // Unusual-volume: the latest ~15-min interval added >= MULT× the prior interval's
 // volume AND >= SURGE_FRAC of the market's entire prior cumulative volume. The
 // second term is a ratio, so it stays unit-agnostic across Polymarket (USD) and
-// Kalshi (contracts). Deliberately conservative — tune against live data.
+// Kalshi (contracts). Deliberately conservative - tune against live data.
 const VOLUME_SPIKE_MULT = 4;
 const VOLUME_SURGE_FRAC = 0.15;
 
@@ -111,7 +111,7 @@ function detectVolumeSpike(
   return {
     kind: 'volume_spike',
     title: `Unusual volume on ${title}`,
-    body: `A surge of trading just hit this market — now at ${Math.round(prob * 100)}%.`,
+    body: `A surge of trading just hit this market, now at ${Math.round(prob * 100)}%.`,
   };
 }
 
@@ -310,7 +310,7 @@ Deno.serve(async (req: Request) => {
   }
   const supabase = createClient(SUPABASE_URL, SERVICE_ROLE);
 
-  // Polymarket is the primary source — a failure here fails the run.
+  // Polymarket is the primary source - a failure here fails the run.
   let markets: NormMarket[];
   try {
     markets = await fetchPolymarket();
@@ -318,7 +318,7 @@ Deno.serve(async (req: Request) => {
     return new Response(JSON.stringify({ error: `polymarket fetch: ${e}` }), { status: 502 });
   }
 
-  // Kalshi is additive — never let it break the Polymarket sync.
+  // Kalshi is additive - never let it break the Polymarket sync.
   let kalshiCount = 0;
   try {
     const k = await fetchKalshi();

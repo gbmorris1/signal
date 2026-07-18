@@ -82,7 +82,7 @@ export async function generateAnalysis(
       });
       const json = await res.json();
       if (json?.gated) {
-        // Server-enforced limit hit — surface the teaser, don't cache.
+        // Server-enforced limit hit - surface the teaser, don't cache.
         return { gated: true, teaser: String(json.teaser ?? '') };
       }
       const parsed = parseAIAnalysis(json);
@@ -111,7 +111,7 @@ export async function generateAnalysis(
 }
 
 /**
- * Most recent CACHED analysis for a market, any snapshot/depth — used for the
+ * Most recent CACHED analysis for a market, any snapshot/depth - used for the
  * gated teaser. Never triggers a model call; returns null when nothing cached.
  */
 export async function fetchCachedAnalysis(marketId: string): Promise<AIAnalysis | null> {

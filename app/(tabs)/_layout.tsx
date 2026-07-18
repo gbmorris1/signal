@@ -30,7 +30,7 @@ export default function TabsLayout() {
         },
         tabBarActiveTintColor: colors.text,
         tabBarInactiveTintColor: colors.textFaint,
-        // A 5-tab bar has no room to reflow at accessibility text sizes —
+        // A 5-tab bar has no room to reflow at accessibility text sizes -
         // the label wraps/clips before the tab bar itself can grow. This is
         // the same call iOS's own Tab Bar effectively makes.
         tabBarAllowFontScaling: false,

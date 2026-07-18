@@ -162,7 +162,7 @@ export default function HomeScreen() {
               <Ionicons name="checkmark-done-circle-outline" size={28} color={colors.textFaint} />
               <Text style={styles.emptyTitle}>Nothing urgent today</Text>
               <Text style={styles.emptyBody}>
-                Markets are calm — nothing crossed the opportunity or watch threshold. Browse
+                Markets are calm. Nothing crossed the opportunity or watch threshold, so browse
                 everything else in Discover.
               </Text>
               <Pressable style={styles.emptyCta} onPress={() => router.push('/(tabs)/discover')}>

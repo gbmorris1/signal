@@ -31,7 +31,7 @@ const PLATFORM_STYLE: Record<Platform, { color: string; bg: string; label: strin
   kalshi: { color: colors.kalshi, bg: colors.kalshiDim, label: 'KALSHI' },
 };
 
-/** Brand-colored platform badge — platform identity should be unmissable. */
+/** Brand-colored platform badge - platform identity should be unmissable. */
 export function PlatformBadge({ platform, size = 'sm' }: { platform: Platform; size?: 'sm' | 'md' }) {
   const s = PLATFORM_STYLE[platform];
   return (

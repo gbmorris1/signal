@@ -149,7 +149,7 @@ export default function DiscoverScreen() {
             </Pressable>
           )}
 
-          {/* Folded into the Movers segment rather than always-on — four
+          {/* Folded into the Movers segment rather than always-on: four
               stacked filter rows above the first result was too much chrome
               on every visit to Trending/AI picks. */}
           {!searching && section === 'movers' && (

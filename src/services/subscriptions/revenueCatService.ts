@@ -3,7 +3,7 @@ import { RC_ENTITLEMENTS } from '@/data/subscriptions';
 import type { SubscriptionService } from './index';
 
 // Real RevenueCat implementation (react-native-purchases). Requires a native
-// build (EAS dev client / TestFlight) — the SDK's native module doesn't exist
+// build (EAS dev client / TestFlight) - the SDK's native module doesn't exist
 // in Expo Go, so the module is loaded lazily and callers fall back to the mock
 // service when it isn't available.
 

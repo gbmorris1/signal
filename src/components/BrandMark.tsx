@@ -2,7 +2,7 @@ import Svg, { Path, Polygon, Polyline, Circle } from 'react-native-svg';
 import { colors } from '@/theme';
 
 /**
- * ODDIQ brand mark — a hexagonal "O" with a stock-chart arrow trending up
+ * ODDIQ brand mark - a hexagonal "O" with a stock-chart arrow trending up
  * through it, rebuilt as vector to match the logo. Crisp at any size and
  * transparent, so it sits on any surface. `mono` collapses it to one color
  * for monochrome contexts (e.g. a header tint).

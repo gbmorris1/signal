@@ -47,7 +47,7 @@ export default function PaywallScreen() {
       void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       setSuccess(true);
       setBusy(false);
-      // Brief confirmation beat before leaving — the highest-stakes tap in
+      // Brief confirmation beat before leaving - the highest-stakes tap in
       // the app deserves an acknowledgment, not an instant navigate-away.
       setTimeout(() => router.back(), 650);
       return;

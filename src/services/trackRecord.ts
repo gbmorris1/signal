@@ -11,7 +11,7 @@ export const TRACK_RECORD_PROVEN_MIN = 15;
 
 /**
  * ODDIQ's rolling accuracy from the `track_record` view. Returns null when there
- * isn't enough resolved history yet, unless `minSample` is lowered — the Home
+ * isn't enough resolved history yet, unless `minSample` is lowered - the Home
  * card passes 1 so it can show an honest "still building" state instead of
  * hiding the moat entirely.
  */

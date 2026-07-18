@@ -31,7 +31,7 @@ function AuthGate() {
     } else if (isAuthed && !needsOnboarding && onAuth) {
       // Fully signed in → done with the entry flow. (Demo users may still
       // visit /auth deliberately; onboarded users may revisit /onboarding
-      // from Profile to edit interests — don't bounce either.)
+      // from Profile to edit interests - don't bounce either.)
       router.replace('/(tabs)');
     }
   }, [loading, isAuthed, demo, needsOnboarding, segments, router]);

@@ -1,11 +1,11 @@
-// ODDIQ design tokens — dark finance-terminal system.
+// ODDIQ design tokens - dark finance-terminal system.
 // Built on the mobile-app-ui-design rules: one font family, 4 type sizes,
 // 2 weights, opacity-driven text hierarchy, 60/30/10 color, 8-pt grid,
 // soft tinted shadows. No raw hex outside this file.
 import type { TextStyle, ViewStyle } from 'react-native';
 
 export const colors = {
-  // 60% — neutral base (navy-cast near-black, tuned to the ODDIQ mark)
+  // 60% - neutral base (navy-cast near-black, tuned to the ODDIQ mark)
   bg: '#080B14',
   surface: '#111726',
   surfaceElevated: '#182034',
@@ -14,11 +14,11 @@ export const colors = {
   // hairlines from white opacity so they sit naturally on any surface
   border: 'rgba(244,246,250,0.08)',
   borderStrong: 'rgba(244,246,250,0.15)',
-  // 30% — text, hierarchy by opacity (100 / 64 / 40)
+  // 30% - text, hierarchy by opacity (100 / 64 / 40)
   text: '#F5F6F8',
   textMuted: 'rgba(245,246,248,0.64)',
   textFaint: 'rgba(245,246,248,0.40)',
-  // 10% — accent: ODDIQ cyan (the ascending arrow) + supporting brand blue
+  // 10% - accent: ODDIQ cyan (the ascending arrow) + supporting brand blue
   accent: '#22C9F5',
   accentDim: 'rgba(34,201,245,0.14)',
   // Mid-blue facet from the mark; secondary brand tone.
@@ -34,7 +34,7 @@ export const colors = {
   signalWatch: '#22C9F5',
   signalNeutral: 'rgba(245,246,248,0.64)',
   signalCaution: '#FFB020',
-  // platform identities — deliberate exception to the accent budget: platform
+  // platform identities - deliberate exception to the accent budget: platform
   // ownership must be unmissable (user-tested requirement)
   polymarket: '#8B7CFF',
   polymarketDim: 'rgba(139,124,255,0.14)',
@@ -43,7 +43,7 @@ export const colors = {
 } as const;
 
 /**
- * Per-category hues. Used ONLY as small dots/tints, never as text color —
+ * Per-category hues. Used ONLY as small dots/tints, never as text color -
  * strong color is reserved for money movement and CTAs.
  */
 export const categoryColors: Record<string, string> = {
@@ -160,7 +160,7 @@ export const card: ViewStyle = {
   borderColor: colors.border,
   borderWidth: 1,
   borderRadius: radius.lg,
-  padding: spacing.xl - 4, // 20 — mobile card baseline on the 4-pt half-step
+  padding: spacing.xl - 4, // 20, mobile card baseline on the 4-pt half-step
   ...shadows.card,
 };
 

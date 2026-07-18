@@ -87,8 +87,8 @@ export function mapKalshiMarket(event: KalshiRawEvent, raw: KalshiRawMarket): Ma
     updatedAt: new Date().toISOString(),
     historyRef: `${series}/${ticker}`,
     // For outcome legs the "yes" side IS the named outcome (a person/answer);
-    // the "no" side is everyone/everything else.
-    outcomeLabels: multi && sub ? [sub, 'Field'] : ['Yes', 'No'],
+    // the "no" side is everyone/everything else - labelled "Other".
+    outcomeLabels: multi && sub ? [sub, 'Other'] : ['Yes', 'No'],
     description: raw.rules_primary?.trim() || undefined,
   };
 }
@@ -100,7 +100,7 @@ export function mapKalshiMarket(event: KalshiRawEvent, raw: KalshiRawMarket): Ma
 // market but still face the volume floor).
 const MAX_LEGS_PER_EVENT = 3;
 const MIN_LEG_PROBABILITY = 0.02;
-const MIN_VOLUME = 25; // contracts — filters never-traded stale listings
+const MIN_VOLUME = 25; // contracts, filters never-traded stale listings
 
 /** Map a page of events (with nested markets) to curated Signal markets. */
 export function mapKalshiEvents(events: KalshiRawEvent[]): Market[] {

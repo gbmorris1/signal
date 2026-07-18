@@ -1,7 +1,7 @@
 import Svg, { Path } from 'react-native-svg';
 import type { Platform } from '@/types';
 
-// Official brand marks, traced from each platform's own logo (nominative use —
+// Official brand marks, traced from each platform's own logo (nominative use -
 // these mark the "Open on …" links out to the real venues). Polymarket's
 // bowtie renders as a filled evenodd path (the hollows come from the fill
 // rule); Kalshi's mark is its "K" glyph.

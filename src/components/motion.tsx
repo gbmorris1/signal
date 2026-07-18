@@ -3,7 +3,7 @@ import { Animated, Easing, Text, type StyleProp, type TextStyle, type ViewStyle 
 
 /**
  * Count-up number. Eases from 0 (or the previous value) to `value` with an
- * ease-out cubic — the terminal "numbers landing" feel. Format controls the
+ * ease-out cubic - the terminal "numbers landing" feel. Format controls the
  * rendered string ("43%", "+8%", "1,204").
  */
 export function AnimatedNumber({

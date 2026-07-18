@@ -13,7 +13,7 @@ const KALSHI_BASE = 'https://api.elections.kalshi.com/trade-api/v2';
 
 /**
  * Live Kalshi data via the public trade API (read endpoints need no auth).
- * Uses the events endpoint with nested markets — the flat /markets listing is
+ * Uses the events endpoint with nested markets - the flat /markets listing is
  * dominated by multi-leg parlays. Defensive: failures return the last good
  * cache (or []) so CombinedSource still serves Polymarket results.
  */

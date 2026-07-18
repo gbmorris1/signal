@@ -1,7 +1,7 @@
 // Supabase Edge Function: revenuecat-webhook
 // Receives RevenueCat subscriber events and records the user's real tier in the
 // `subscriptions` table (and mirrors to users.plan). This is what makes
-// server-side entitlement enforcement in analyze-market trustworthy — the app
+// server-side entitlement enforcement in analyze-market trustworthy - the app
 // can claim any tier, but only RevenueCat (via this webhook) sets the truth.
 //
 // Deploy:  supabase functions deploy revenuecat-webhook --no-verify-jwt
@@ -27,7 +27,7 @@ function planFromEntitlements(ids: string[]): 'free' | 'pro' | 'trader' {
 }
 
 // Event types that mean the user currently has access (cancellation only turns
-// off auto-renew — access persists until EXPIRATION).
+// off auto-renew - access persists until EXPIRATION).
 const ACTIVE_TYPES = new Set([
   'INITIAL_PURCHASE',
   'RENEWAL',

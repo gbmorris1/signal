@@ -28,7 +28,7 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 const PROVIDER: 'openrouter' | 'anthropic' = OPENROUTER_API_KEY ? 'openrouter' : 'anthropic';
 const AI_MODEL_ENV = Deno.env.get('AI_MODEL');
 
-// OpenRouter's free-tier catalog rotates — verify against
+// OpenRouter's free-tier catalog rotates - verify against
 // https://openrouter.ai/api/v1/models (ids ending ':free') before changing.
 // Avoid "reasoning" models here: they spend the token budget on chain-of-
 // thought monologue and can get cut off before ever emitting the JSON object,
@@ -47,7 +47,7 @@ type Depth = 'shallow' | 'standard' | 'deep';
 const DEPTH_CONFIG: Record<Depth, { maxTokens: number; results: number; extra: string }> = {
   shallow: {
     maxTokens: 500,
-    results: 0, // no retrieval — the free-tier teaser
+    results: 0, // no retrieval - the free-tier teaser
     extra: 'Keep every field to ONE short sentence; max 2 catalysts and 2 risk_factors. Edge is one sentence.',
   },
   standard: {
@@ -176,11 +176,11 @@ sources. Your job:
 - Ground every claim in the sources or in verifiable base rates / scheduled
   events you know. Cite sources inline as [1], [2] (ASCII square brackets only)
   matching the list.
-- Keep it tight. Return valid, complete JSON — do not run long and get cut off.
+- Keep it tight. Return valid, complete JSON - do not run long and get cut off.
 - NEVER invent a news event. If the sources don't explain a move, say what the
   price action alone implies and flag the uncertainty.
 - Be specific: real names, real dates, real mechanisms. No "sentiment shifted".
-- "edge" is the headline take — the one paragraph a trader reads first. State
+- "edge" is the headline take - the one paragraph a trader reads first. State
   your lean vs the market, your conviction, and what would change your mind.
 - Neutral, non-advisory framing. Analysis, not financial advice.
 
@@ -209,7 +209,7 @@ function trendLine(history: Snapshot[] | undefined): string {
 
 function sourceBlock(sources: Source[]): string {
   if (sources.length === 0) {
-    return 'NEWS SOURCES: none available — reason from price action and known base rates only.';
+    return 'NEWS SOURCES: none available - reason from price action and known base rates only.';
   }
   const lines = sources.map(
     (s, i) => `[${i + 1}] ${s.title}${s.date ? ` (${s.date})` : ''}\n${s.snippet}`,
@@ -238,7 +238,7 @@ function jsonResponse(body: unknown, status = 200): Response {
 
 /**
  * Tolerant JSON extraction from model output. Handles code fences, full-width
- * 【n】 citation brackets, and — critically — responses truncated by the token
+ * 【n】 citation brackets, and - critically - responses truncated by the token
  * limit, by closing any open string/array/object so a partial answer still
  * parses instead of falling back to canned text.
  */
@@ -403,7 +403,7 @@ Deno.serve(async (req: Request) => {
     .maybeSingle();
 
   if (cached) {
-    // Cache hits are free — no model call, so they don't spend quota.
+    // Cache hits are free - no model call, so they don't spend quota.
     return jsonResponse({
       edge: cached.edge ?? '',
       summary: cached.summary,

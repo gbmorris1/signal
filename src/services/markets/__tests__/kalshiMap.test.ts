@@ -1,5 +1,5 @@
 import { mapKalshiMarket, mapKalshiEvents, type KalshiRawEvent } from '../kalshiMap';
-import { titleKeywords, overlap } from '../combinedSource';
+import { titleKeywords, overlap, matchStats, isSameQuestion } from '../combinedSource';
 
 const event: KalshiRawEvent = {
   event_ticker: 'FED-24SEP',
@@ -73,5 +73,26 @@ describe('cross-platform title matching', () => {
     const a = titleKeywords('Will the Fed cut rates in September?');
     const b = titleKeywords('Bitcoin above $100k by end of 2026?');
     expect(overlap(a, b)).toBeLessThan(0.5);
+  });
+});
+
+describe('strict same-question matching (arb pairing)', () => {
+  const sq = (x: string, y: string, min: number) =>
+    isSameQuestion(matchStats(titleKeywords(x), titleKeywords(y)), min);
+
+  it('pairs genuinely identical questions across venues', () => {
+    expect(sq('Will Bitcoin reach $150k in 2026?', 'Bitcoin above $150k by end of 2026?', 0.72)).toBe(true);
+  });
+
+  it('does NOT pair a specific race with a broad political market', () => {
+    // The reported bug: a Mamdani mayoral line paired with a national
+    // "Democratic president" market just because both are politics.
+    expect(
+      sq('Will Zohran Mamdani win the NYC mayoral race?', 'Will a Democrat win the 2028 presidential election?', 0.72),
+    ).toBe(false);
+  });
+
+  it('does NOT pair on a single shared token', () => {
+    expect(sq('Will Trump win Iowa?', 'Will Trump be indicted again?', 0.72)).toBe(false);
   });
 });

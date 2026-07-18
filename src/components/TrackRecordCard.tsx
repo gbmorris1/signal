@@ -56,11 +56,11 @@ export function TrackRecordCard() {
           <Text style={styles.title}>Every call, scored.</Text>
           <Text style={styles.sub}>
             ODDIQ logs its probability against the market on every analysis and scores it the moment
-            the market resolves. The verified record appears here as calls settle — no cherry-picking.
+            the market resolves. The verified record appears here as calls settle, with no cherry-picking.
           </Text>
           {loaded && record && record.resolvedPredictions > 0 && (
             <Text style={styles.building}>
-              {record.resolvedPredictions} scored so far — building toward a statistically meaningful
+              {record.resolvedPredictions} scored so far, building toward a statistically meaningful
               sample.
             </Text>
           )}

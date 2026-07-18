@@ -43,7 +43,7 @@ function animateRemoval(onRemove: () => void) {
  * Swipe-left row for the watchlist. Two gestures in one:
  *   • a short swipe rests on a red "Remove" button, and
  *   • a full swipe (past ~50% of the screen, or a fast flick) flings the row
- *     off and removes it — the fast path people expect from Mail/Reminders.
+ *     off and removes it - the fast path people expect from Mail/Reminders.
  * Built on PanResponder + Animated (no react-native-gesture-handler dep), the
  * same idiom the chart scrubber already uses in this codebase.
  */
