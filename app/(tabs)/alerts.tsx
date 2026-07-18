@@ -134,11 +134,15 @@ const BADGE: Record<Alert['kind'], { label: string; style: 'badgeAi' | 'badgeMov
 function AlertRow({ alert, onPress }: { alert: Alert; onPress: () => void }) {
   const b = BADGE[alert.kind] ?? BADGE.move;
   const stripeColor = alert.kind === 'volume_spike' ? colors.warn : colors.accent;
+  const unread = !alert.read;
   return (
     <Pressable
       style={({ pressed }) => [
         styles.card,
-        b.stripe && { borderLeftWidth: 3, borderLeftColor: stripeColor, borderColor: stripeColor },
+        // Unread: raised, brighter surface + coloured stripe. Read: flattened
+        // to the page and dimmed, so the two are unmistakable at a glance.
+        unread ? styles.cardUnread : styles.cardRead,
+        unread && b.stripe && { borderLeftWidth: 3, borderLeftColor: stripeColor, borderColor: stripeColor },
         pressed && { backgroundColor: colors.surfaceElevated },
       ]}
       onPress={() => {
@@ -148,14 +152,14 @@ function AlertRow({ alert, onPress }: { alert: Alert; onPress: () => void }) {
     >
       <View style={styles.rowTop}>
         <View style={styles.badgeRow}>
-          {!alert.read && <View style={styles.unreadDot} />}
-          <Text style={[styles.badge, styles[b.style]]}>{b.label}</Text>
+          {unread && <View style={styles.unreadDot} />}
+          <Text style={[styles.badge, styles[b.style], !unread && styles.badgeRead]}>{b.label}</Text>
         </View>
-        <Text style={styles.time}>{timeAgo(alert.createdAt)}</Text>
+        <Text style={styles.time}>{unread ? timeAgo(alert.createdAt) : `Read · ${timeAgo(alert.createdAt)}`}</Text>
       </View>
-      <Text style={styles.alertTitle}>{alert.title}</Text>
+      <Text style={[styles.alertTitle, !unread && styles.textRead]}>{alert.title}</Text>
       <Text style={styles.body}>{alert.body}</Text>
-      <Text style={styles.viewLink}>View market →</Text>
+      {unread && <Text style={styles.viewLink}>View market →</Text>}
     </Pressable>
   );
 }
@@ -169,6 +173,10 @@ const styles = StyleSheet.create({
     ...card,
     gap: spacing.sm,
   },
+  cardUnread: { backgroundColor: colors.surfaceElevated },
+  cardRead: { backgroundColor: colors.bg, opacity: 0.62 },
+  textRead: { color: colors.textMuted, fontWeight: '400' },
+  badgeRead: { opacity: 0.6 },
   rowTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   badgeRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   unreadDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: colors.accent },
