@@ -72,6 +72,7 @@ export function mapKalshiMarket(event: KalshiRawEvent, raw: KalshiRawMarket): Ma
   // Series ticker (event ticker before the first '-') + market ticker, for the
   // candlesticks history endpoint.
   const series = (event.event_ticker ?? ticker).split('-')[0];
+  const eventId = event.event_ticker?.trim();
 
   return {
     id: `kalshi:${ticker}`,
@@ -90,15 +91,19 @@ export function mapKalshiMarket(event: KalshiRawEvent, raw: KalshiRawMarket): Ma
     // the "no" side is everyone/everything else - labelled "Other".
     outcomeLabels: multi && sub ? [sub, 'Other'] : ['Yes', 'No'],
     description: raw.rules_primary?.trim() || undefined,
+    // Grouping tags for multi-outcome events (grouped for display by the app).
+    ...(multi && sub && eventId
+      ? { eventId: `kalshi-event:${eventId}`, eventTitle, outcomeLabel: sub }
+      : {}),
   };
 }
 
 // Multi-outcome events can carry dozens of long-shot legs (every 1% candidate
-// in an election). Keep the feed signal-dense: per event, keep the top legs by
-// volume, drop sub-2% long shots, and require a minimum of real trading so
-// stale, never-traded listings don't surface (binary events keep the whole
-// market but still face the volume floor).
-const MAX_LEGS_PER_EVENT = 3;
+// in an election). Legs are grouped into one card for display, so we can keep
+// the whole field (up to a cap) rather than only the top 3 — the leaderboard
+// wants the field. Still drop sub-2% long shots and require real trading so
+// stale, never-traded listings don't surface.
+const MAX_LEGS_PER_EVENT = 12;
 const MIN_LEG_PROBABILITY = 0.02;
 const MIN_VOLUME = 25; // contracts, filters never-traded stale listings
 

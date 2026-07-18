@@ -35,6 +35,27 @@ export interface Market {
   outcomeLabels: [string, string];
   /** Plain-language explanation of the market and its resolution rules. */
   description?: string;
+  /**
+   * Multi-outcome grouping. When several markets are outcomes of one event
+   * (e.g. each candidate in a race), they share `eventId` + `eventTitle`, and
+   * `outcomeLabel` is this leg's specific outcome ("Mamdani"). Absent for plain
+   * binary markets. The market stays its own addressable unit; these only drive
+   * grouped display.
+   */
+  eventId?: string;
+  eventTitle?: string;
+  outcomeLabel?: string;
+}
+
+/** A multi-outcome event: several outcome markets grouped under one question. */
+export interface EventGroup {
+  kind: 'event';
+  eventId: string;
+  title: string;
+  category: Category;
+  /** Outcome markets, ranked by probability descending. */
+  outcomes: Market[];
+  totalVolume: number;
 }
 
 export interface MarketSnapshot {

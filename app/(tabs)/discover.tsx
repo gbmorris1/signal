@@ -16,8 +16,10 @@ import { useQuery } from '@tanstack/react-query';
 import { colors, categoryColors, radius, spacing, typography } from '@/theme';
 import { getMarketSource } from '@/services/markets';
 import { MarketCard } from '@/components/MarketCard';
+import { EventCard } from '@/components/EventCard';
 import { CardSkeleton } from '@/components/Skeleton';
 import { PlatformBadge } from '@/components/Chip';
+import { groupMarkets, isEventGroup } from '@/services/markets/grouping';
 import { pct, signedPct } from '@/lib/format';
 import type { Category, Market } from '@/types';
 
@@ -88,6 +90,9 @@ export default function DiscoverScreen() {
       .slice(0, 100);
   }, [data, category, section, oddsBand, query, searching]);
 
+  // Collapse multi-outcome legs into single event cards for the feed.
+  const items = useMemo(() => groupMarkets(sorted), [sorted]);
+
   // Horizontal rail: sharpest movers across everything. Always rendered (when
   // not searching) so the header layout never jumps between sections.
   const rail = useMemo(
@@ -100,8 +105,8 @@ export default function DiscoverScreen() {
 
   return (
     <FlatList
-      data={sorted}
-      keyExtractor={(m) => m.id}
+      data={items}
+      keyExtractor={(it) => (isEventGroup(it) ? it.eventId : it.id)}
       contentContainerStyle={styles.content}
       keyboardShouldPersistTaps="handled"
       initialNumToRender={8}
@@ -236,7 +241,9 @@ export default function DiscoverScreen() {
           </ScrollView>
         </View>
       }
-      renderItem={({ item }) => <MarketCard market={item} />}
+      renderItem={({ item }) =>
+        isEventGroup(item) ? <EventCard group={item} /> : <MarketCard market={item} />
+      }
       ItemSeparatorComponent={() => <View style={{ height: spacing.md }} />}
       ListEmptyComponent={
         isLoading ? (
