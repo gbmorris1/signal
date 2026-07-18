@@ -217,7 +217,34 @@ function sourceBlock(sources: Source[]): string {
   return `NEWS SOURCES (cite as [n]):\n${lines.join('\n\n')}`;
 }
 
-function userPrompt(m: Market, history: Snapshot[] | undefined, sources: Source[]): string {
+interface FieldOutcome {
+  label: string;
+  probability: number;
+}
+
+/** The other outcomes of a multi-outcome event, so the model weighs relative value. */
+function fieldBlock(field: FieldOutcome[] | undefined, thisLabel: string): string {
+  if (!field || field.length < 2) return '';
+  const ranked = [...field]
+    .sort((a, b) => b.probability - a.probability)
+    .map((o) => `- ${o.label}: ${Math.round(o.probability * 100)}%${o.label === thisLabel ? '  <- this outcome' : ''}`);
+  return [
+    ``,
+    `THIS IS ONE OUTCOME IN A MULTI-OUTCOME EVENT. The full field (probabilities should`,
+    `roughly sum to 100%):`,
+    ...ranked,
+    `Weigh this outcome against the field: is it mispriced RELATIVE to its rivals, who`,
+    `it has to beat, and where the probability mass is misallocated.`,
+  ].join('\n');
+}
+
+function userPrompt(
+  m: Market,
+  history: Snapshot[] | undefined,
+  sources: Source[],
+  field?: FieldOutcome[],
+): string {
+  const thisLabel = m.title.includes('·') ? m.title.split('·').pop()!.trim() : m.title;
   return [
     `Market: "${m.title}"`,
     `Platform: ${m.id.split(':')[0]} · Category: ${m.category}`,
@@ -225,6 +252,7 @@ function userPrompt(m: Market, history: Snapshot[] | undefined, sources: Source[
     `24h change: ${(m.change24h * 100).toFixed(1)} points · Volume: $${Math.round(m.volume).toLocaleString()}`,
     trendLine(history),
     `Today's date: ${new Date().toISOString().slice(0, 10)}`,
+    fieldBlock(field, thisLabel),
     ``,
     sourceBlock(sources),
     ``,
@@ -300,10 +328,11 @@ async function callModel(
   history: Snapshot[] | undefined,
   sources: Source[],
   depth: Depth,
+  field?: FieldOutcome[],
 ): Promise<string> {
   const cfg = DEPTH_CONFIG[depth];
   const system = SYSTEM + (cfg.extra ? `\n\nDEPTH: ${cfg.extra}` : '');
-  const user = userPrompt(market, history, sources);
+  const user = userPrompt(market, history, sources, field);
 
   if (PROVIDER === 'openrouter') {
     let lastErr = 'no models tried';
@@ -382,11 +411,21 @@ Deno.serve(async (req: Request) => {
   let market: Market;
   let history: Snapshot[] | undefined;
   let depth: Depth = 'standard';
+  let field: FieldOutcome[] | undefined;
   try {
     const body = await req.json();
     market = body.market;
     history = Array.isArray(body.history) ? body.history : undefined;
     depth = clampDepth(asDepth(body.depth), limits.depth); // never deeper than tier
+    // Sanitize the field: at most 12 outcomes, valid labels + probabilities.
+    field = Array.isArray(body.field)
+      ? body.field
+          .filter((o: unknown): o is FieldOutcome => {
+            const f = o as FieldOutcome;
+            return !!f && typeof f.label === 'string' && Number.isFinite(f.probability);
+          })
+          .slice(0, 12)
+      : undefined;
     if (!market?.id || !market?.title) throw new Error('missing market');
   } catch {
     return jsonResponse({ error: 'invalid body' }, 400);
@@ -446,7 +485,7 @@ Deno.serve(async (req: Request) => {
 
   let text: string;
   try {
-    text = await callModel(market, history, sources, depth);
+    text = await callModel(market, history, sources, depth, field);
   } catch (e) {
     console.error('analyze-market: model call failed:', String(e));
     return jsonResponse({ error: String(e) }, 502);

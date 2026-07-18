@@ -93,6 +93,17 @@ export default function MarketDetailScreen() {
   });
   const snapshots = history?.snapshots ?? [];
 
+  // Sibling outcomes when this market is one leg of a multi-outcome event —
+  // passed to the AI so it reasons about relative value across the field.
+  const { data: siblings = [] } = useQuery<Market[]>({
+    queryKey: ['siblings', market?.eventId],
+    enabled: !!market?.eventId,
+    queryFn: async () => {
+      const all = await source.listMarkets();
+      return all.filter((m) => m.eventId === market!.eventId && m.id !== market!.id);
+    },
+  });
+
   // Funnel: market viewed (first view per user is MIN(created_at) in SQL).
   useEffect(() => {
     if (marketId) track('market_viewed', { market_id: marketId });
@@ -135,8 +146,16 @@ export default function MarketDetailScreen() {
     setLoadingAI(true);
     try {
       // Depth follows the tier; the SERVER enforces the real tier + daily quota
-      // and returns a gated teaser when the user is over their limit.
-      const result = await generateAnalysis(market, snapshots, entitlements.aiDepth);
+      // and returns a gated teaser when the user is over their limit. For an
+      // event leg, hand the model the rest of the field for relative-value context.
+      const field =
+        market.eventId && siblings.length > 0
+          ? [
+              { label: market.outcomeLabel ?? market.title, probability: market.probability },
+              ...siblings.map((s) => ({ label: s.outcomeLabel ?? s.title, probability: s.probability })),
+            ]
+          : undefined;
+      const result = await generateAnalysis(market, snapshots, entitlements.aiDepth, field);
       if (isGated(result)) {
         setGated(true);
         setTeaser(result.teaser);

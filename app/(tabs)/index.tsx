@@ -7,10 +7,12 @@ import { Ionicons } from '@expo/vector-icons';
 import { useQuery } from '@tanstack/react-query';
 import { colors, radius, spacing, typography } from '@/theme';
 import { getMarketSource } from '@/services/markets';
-import { recommendFeedDetailed, type RankedMarket } from '@/services/recommend';
+import { recommendFeedDetailed } from '@/services/recommend';
 import { MarketCard } from '@/components/MarketCard';
+import { EventCard } from '@/components/EventCard';
 import { CardSkeleton } from '@/components/Skeleton';
 import { TrackRecordCard } from '@/components/TrackRecordCard';
+import { groupMarkets, isEventGroup, type FeedItem } from '@/services/markets/grouping';
 import { AnimatedNumber, Enter } from '@/components/motion';
 import { signedPct } from '@/lib/format';
 import { useAuth } from '@/state/auth';
@@ -57,6 +59,14 @@ export default function HomeScreen() {
     [data, interests, experience],
   );
 
+  // Collapse multi-outcome legs into event cards, keeping each standalone
+  // market's "why it surfaced" reason.
+  const items = useMemo(() => groupMarkets(briefing.map((r) => r.market)), [briefing]);
+  const reasonById = useMemo(
+    () => new Map(briefing.map((r) => [r.market.id, r.reason])),
+    [briefing],
+  );
+
   // Hero stats across the whole tracked universe.
   const biggestMover = useMemo(
     () => [...data].sort((a, b) => Math.abs(b.change24h) - Math.abs(a.change24h))[0],
@@ -67,8 +77,8 @@ export default function HomeScreen() {
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <FlatList
-        data={briefing}
-        keyExtractor={(r) => r.market.id}
+        data={items}
+        keyExtractor={(it) => (isEventGroup(it) ? it.eventId : it.id)}
         contentContainerStyle={styles.content}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.accent} />
@@ -148,9 +158,13 @@ export default function HomeScreen() {
             </View>
           </View>
         }
-        renderItem={({ item, index }: { item: RankedMarket; index: number }) => (
+        renderItem={({ item, index }: { item: FeedItem; index: number }) => (
           <Enter index={index}>
-            <MarketCard market={item.market} reason={item.reason} />
+            {isEventGroup(item) ? (
+              <EventCard group={item} />
+            ) : (
+              <MarketCard market={item} reason={reasonById.get(item.id)} />
+            )}
           </Enter>
         )}
         ItemSeparatorComponent={() => <View style={{ height: spacing.md }} />}

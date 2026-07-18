@@ -9,10 +9,12 @@ import { getMarketSource } from '@/services/markets';
 import { PlatformBadge } from '@/components/Chip';
 import { OutcomeSplit } from '@/components/OutcomeSplit';
 import { SwipeableRow } from '@/components/SwipeableRow';
+import { EventCard } from '@/components/EventCard';
 import { Enter } from '@/components/motion';
+import { groupMarkets, isEventGroup } from '@/services/markets/grouping';
 import { useWatchlist } from '@/state/watchlist';
 import { signedPct } from '@/lib/format';
-import type { Market } from '@/types';
+import type { EventGroup, Market } from '@/types';
 
 type PlatformFilter = 'all' | 'polymarket' | 'kalshi';
 const FILTERS: { key: PlatformFilter; label: string }[] = [
@@ -52,16 +54,24 @@ export default function WatchlistScreen() {
     () => (filter === 'all' ? watched : watched.filter((m) => m.platform === filter)),
     [watched, filter],
   );
+  // Group watched outcome legs into event cards for display.
+  const items = useMemo(() => groupMarkets(saved), [saved]);
 
   function remove(market: Market) {
     void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     toggle(market);
   }
 
+  // Removing an event unwatches every one of its outcomes you'd saved.
+  function removeGroup(group: EventGroup) {
+    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    for (const o of group.outcomes) toggle(o);
+  }
+
   return (
     <FlatList
-      data={saved}
-      keyExtractor={(m) => m.id}
+      data={items}
+      keyExtractor={(it) => (isEventGroup(it) ? it.eventId : it.id)}
       contentContainerStyle={styles.content}
       refreshControl={
         <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.accent} />
@@ -98,9 +108,15 @@ export default function WatchlistScreen() {
       }
       renderItem={({ item, index }) => (
         <Enter index={index}>
-          <SwipeableRow onRemove={() => remove(item)}>
-            <WatchRow market={item} onRemove={() => remove(item)} />
-          </SwipeableRow>
+          {isEventGroup(item) ? (
+            <SwipeableRow onRemove={() => removeGroup(item)}>
+              <EventCard group={item} />
+            </SwipeableRow>
+          ) : (
+            <SwipeableRow onRemove={() => remove(item)}>
+              <WatchRow market={item} onRemove={() => remove(item)} />
+            </SwipeableRow>
+          )}
         </Enter>
       )}
       ItemSeparatorComponent={() => <View style={{ height: spacing.md }} />}

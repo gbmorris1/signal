@@ -53,12 +53,20 @@ export function isGated(r: AnalysisResult): r is GatedResult {
   return (r as GatedResult).gated === true;
 }
 
+/** Other outcomes in the same multi-outcome event, so the model can reason across the field. */
+export interface FieldOutcome {
+  label: string;
+  probability: number;
+}
+
 export async function generateAnalysis(
   market: Market,
   history: MarketSnapshot[],
   depth: AnalysisDepth = 'standard',
+  field?: FieldOutcome[],
 ): Promise<AnalysisResult> {
-  const key = `${snapshotHash(market, history)}:${depth}`;
+  const fieldKey = field && field.length > 0 ? `:f${field.length}` : '';
+  const key = `${snapshotHash(market, history)}:${depth}${fieldKey}`;
   const hit = cache.get(key);
   if (hit) return hit;
 
@@ -78,7 +86,7 @@ export async function generateAnalysis(
           'Content-Type': 'application/json',
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
-        body: JSON.stringify({ market, history, depth }),
+        body: JSON.stringify({ market, history, depth, field }),
       });
       const json = await res.json();
       if (json?.gated) {
