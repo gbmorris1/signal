@@ -5,7 +5,7 @@ export type Category = 'politics' | 'finance' | 'crypto' | 'sports' | 'world' | 
 export type AISignal = 'opportunity' | 'watch' | 'neutral' | 'caution';
 export type Confidence = 'low' | 'medium' | 'high';
 export type PlanTier = 'free' | 'pro' | 'trader';
-export type AlertKind = 'move' | 'ai_shift';
+export type AlertKind = 'move' | 'ai_shift' | 'volume_spike';
 export type ExperienceLevel = 'beginner' | 'active' | 'professional';
 
 export interface UserPreferences {

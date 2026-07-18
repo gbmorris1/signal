@@ -125,13 +125,20 @@ export default function AlertsScreen() {
   );
 }
 
+const BADGE: Record<Alert['kind'], { label: string; style: 'badgeAi' | 'badgeMove' | 'badgeVol'; stripe: boolean }> = {
+  ai_shift: { label: 'AI SHIFT', style: 'badgeAi', stripe: true },
+  volume_spike: { label: 'VOLUME', style: 'badgeVol', stripe: true },
+  move: { label: 'MOVE', style: 'badgeMove', stripe: false },
+};
+
 function AlertRow({ alert, onPress }: { alert: Alert; onPress: () => void }) {
-  const premium = alert.kind === 'ai_shift';
+  const b = BADGE[alert.kind] ?? BADGE.move;
+  const stripeColor = alert.kind === 'volume_spike' ? colors.warn : colors.accent;
   return (
     <Pressable
       style={({ pressed }) => [
         styles.card,
-        premium && { borderLeftWidth: 3, borderLeftColor: colors.accent, borderColor: colors.accent },
+        b.stripe && { borderLeftWidth: 3, borderLeftColor: stripeColor, borderColor: stripeColor },
         pressed && { backgroundColor: colors.surfaceElevated },
       ]}
       onPress={() => {
@@ -142,9 +149,7 @@ function AlertRow({ alert, onPress }: { alert: Alert; onPress: () => void }) {
       <View style={styles.rowTop}>
         <View style={styles.badgeRow}>
           {!alert.read && <View style={styles.unreadDot} />}
-          <Text style={[styles.badge, premium ? styles.badgeAi : styles.badgeMove]}>
-            {premium ? 'AI SHIFT' : 'MOVE'}
-          </Text>
+          <Text style={[styles.badge, styles[b.style]]}>{b.label}</Text>
         </View>
         <Text style={styles.time}>{timeAgo(alert.createdAt)}</Text>
       </View>
@@ -169,6 +174,7 @@ const styles = StyleSheet.create({
   unreadDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: colors.accent },
   badge: { fontSize: 10, fontWeight: '700', letterSpacing: 0.5, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4, overflow: 'hidden' },
   badgeAi: { color: colors.bg, backgroundColor: colors.accent },
+  badgeVol: { color: colors.bg, backgroundColor: colors.warn },
   badgeMove: { color: colors.textMuted, backgroundColor: colors.surfaceElevated },
   time: { color: colors.textFaint, fontSize: 12 },
   alertTitle: { ...typography.heading, color: colors.text },
