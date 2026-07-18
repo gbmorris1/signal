@@ -10,6 +10,7 @@ import { getMarketSource } from '@/services/markets';
 import { recommendFeedDetailed, type RankedMarket } from '@/services/recommend';
 import { MarketCard } from '@/components/MarketCard';
 import { CardSkeleton } from '@/components/Skeleton';
+import { TrackRecordCard } from '@/components/TrackRecordCard';
 import { AnimatedNumber, Enter } from '@/components/motion';
 import { signedPct } from '@/lib/format';
 import { useAuth } from '@/state/auth';
@@ -126,6 +127,14 @@ export default function HomeScreen() {
                     <AnimatedNumber value={platforms} style={styles.heroValue} />
                     <Text style={styles.heroLabel}>{platforms === 1 ? 'platform' : 'platforms'}</Text>
                   </View>
+                </View>
+              </Enter>
+            )}
+
+            {!isLoading && (
+              <Enter>
+                <View style={styles.trackWrap}>
+                  <TrackRecordCard />
                 </View>
               </Enter>
             )}
@@ -251,6 +260,7 @@ const styles = StyleSheet.create({
   },
   heroLabel: { fontSize: 10, color: colors.textFaint, marginTop: 2, letterSpacing: 0.3 },
   heroDivider: { width: 1, height: 26, backgroundColor: colors.border },
+  trackWrap: { marginTop: spacing.lg },
   sectionRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',

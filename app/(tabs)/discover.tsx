@@ -38,11 +38,21 @@ const SECTIONS: { key: Section; label: string }[] = [
   { key: 'ai', label: 'AI picks' },
 ];
 
+// Odds-band screener: the mobile-friendly form of a probability-range filter.
+type OddsBand = 'any' | 'longshot' | 'tossup' | 'favorite';
+const ODDS_BANDS: { key: OddsBand; label: string; test: (p: number) => boolean }[] = [
+  { key: 'any', label: 'Any odds', test: () => true },
+  { key: 'longshot', label: 'Longshots', test: (p) => p < 0.25 },
+  { key: 'tossup', label: 'Toss-ups', test: (p) => p >= 0.4 && p <= 0.6 },
+  { key: 'favorite', label: 'Favorites', test: (p) => p > 0.75 },
+];
+
 export default function DiscoverScreen() {
   const source = useMemo(() => getMarketSource(), []);
   const [query, setQuery] = useState('');
   const [category, setCategory] = useState<Category | 'all'>('all');
   const [section, setSection] = useState<Section>('trending');
+  const [oddsBand, setOddsBand] = useState<OddsBand>('any');
   const [refreshing, setRefreshing] = useState(false);
 
   const { data = [], isLoading, refetch } = useQuery<Market[]>({
@@ -64,8 +74,10 @@ export default function DiscoverScreen() {
   // scrolls, and it keeps filter taps instant.
   const sorted = useMemo(() => {
     const q = query.toLowerCase();
+    const bandTest = ODDS_BANDS.find((b) => b.key === oddsBand)!.test;
     const filtered = data
       .filter((m: Market) => (category === 'all' ? true : m.category === category))
+      .filter((m: Market) => bandTest(m.probability))
       .filter((m: Market) => (searching ? m.title.toLowerCase().includes(q) : true));
     return filtered
       .sort((a, b) => {
@@ -74,7 +86,7 @@ export default function DiscoverScreen() {
         return b.volume - a.volume; // trending
       })
       .slice(0, 100);
-  }, [data, category, section, query, searching]);
+  }, [data, category, section, oddsBand, query, searching]);
 
   // Horizontal rail: sharpest movers across everything. Always rendered (when
   // not searching) so the header layout never jumps between sections.
@@ -186,6 +198,28 @@ export default function DiscoverScreen() {
               );
             })}
           </ScrollView>
+
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.chipRow}
+          >
+            {ODDS_BANDS.map((b) => {
+              const active = oddsBand === b.key;
+              return (
+                <Pressable
+                  key={b.key}
+                  onPress={() => {
+                    void Haptics.selectionAsync();
+                    setOddsBand(b.key);
+                  }}
+                  style={[styles.chip, active && { backgroundColor: colors.accentDim, borderColor: colors.accent }]}
+                >
+                  <Text style={[styles.chipText, active && { color: colors.text }]}>{b.label}</Text>
+                </Pressable>
+              );
+            })}
+          </ScrollView>
         </View>
       }
       renderItem={({ item }) => <MarketCard market={item} />}
@@ -200,7 +234,9 @@ export default function DiscoverScreen() {
             <Text style={styles.emptyBody}>
               {searching
                 ? `No markets match “${query}”. Try a broader term like “Fed” or “Bitcoin”.`
-                : 'No markets in this category right now. Check back after the next sync.'}
+                : oddsBand !== 'any' || category !== 'all'
+                  ? 'No markets match these filters. Try widening the odds band or category.'
+                  : 'No markets right now. Check back after the next sync.'}
             </Text>
           </View>
         )
