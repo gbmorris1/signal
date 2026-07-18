@@ -1,38 +1,59 @@
-import Svg, { Path, Polygon, Defs, LinearGradient, Stop } from 'react-native-svg';
+import Svg, { Path, Polygon, Polyline, Circle } from 'react-native-svg';
 import { colors } from '@/theme';
 
 /**
- * ODDIQ brand mark, rebuilt as vector from the logo board: a hexagonal "O"
- * with an ascending arrow rising through it. Crisp at any size (the source
- * board only had a small raster). `mono` renders a single-color version for
- * headers/monochrome contexts.
+ * ODDIQ brand mark — a hexagonal "O" with a stock-chart arrow trending up
+ * through it, rebuilt as vector to match the logo. Crisp at any size and
+ * transparent, so it sits on any surface. `mono` collapses it to one color
+ * for monochrome contexts (e.g. a header tint).
  */
 export function BrandMark({ size = 40, mono = false }: { size?: number; mono?: boolean }) {
-  const navy = mono ? colors.text : '#0E1E45';
-  const blue = mono ? colors.text : '#1E6FD9';
-  const cyan = mono ? colors.text : '#22C9F5';
+  const ring = mono ? colors.text : '#2A3E6E';
+  const facet = mono ? colors.text : '#22C9F5';
+  const back = mono ? colors.text : '#1E2A5C';
+  const mid = mono ? colors.text : '#1E6FD9';
+  const front = mono ? colors.text : '#22C9F5';
+  const node = mono ? colors.text : '#E8FBFF';
 
   return (
     <Svg width={size} height={size} viewBox="0 0 100 100" fill="none">
-      <Defs>
-        <LinearGradient id="odq-arrow" x1="0" y1="1" x2="1" y2="0">
-          <Stop offset="0" stopColor={blue} />
-          <Stop offset="1" stopColor={cyan} />
-        </LinearGradient>
-      </Defs>
-
-      {/* Hexagonal "O" — open on the right where the arrow passes through */}
+      {/* Hexagonal "O" ring */}
       <Path
-        d="M34 16 L14 28 L14 52 L34 64 L44 58 L26 48 L26 32 L44 22 Z"
-        fill={navy}
+        fillRule="evenodd"
+        d="M30,76 L9.2,64 L9.2,40 L30,28 L50.8,40 L50.8,64 Z M30,65 L18.7,58.5 L18.7,45.5 L30,39 L41.3,45.5 L41.3,58.5 Z"
+        fill={ring}
       />
-
-      {/* Ascending arrow shaft (three rising facets) */}
-      <Polygon points="40,70 54,44 62,49 48,75" fill={navy} opacity={mono ? 1 : 0.9} />
-      <Polygon points="52,60 66,34 74,39 60,65" fill="url(#odq-arrow)" />
-
+      {/* Cyan lower-left facet */}
+      <Polygon points="9.2,64 30,76 30,65 18.7,58.5" fill={facet} />
+      {/* Ascending ribbons: navy shadow, blue, cyan front */}
+      <Polyline
+        points="34,66 48,52 57,60 73,39"
+        fill="none"
+        stroke={back}
+        strokeWidth={6}
+        strokeLinejoin="round"
+        strokeLinecap="round"
+      />
+      <Polyline
+        points="34,63 48,49 57,57 73,36"
+        fill="none"
+        stroke={mid}
+        strokeWidth={6}
+        strokeLinejoin="round"
+        strokeLinecap="round"
+      />
+      <Polyline
+        points="34,60 48,46 57,54 71,33"
+        fill="none"
+        stroke={front}
+        strokeWidth={6}
+        strokeLinejoin="round"
+        strokeLinecap="round"
+      />
       {/* Arrowhead */}
-      <Polygon points="66,20 86,26 74,44 70,34 58,40" fill={cyan} />
+      <Polygon points="83,22 66,25 75,40" fill={front} />
+      {/* Data node */}
+      <Circle cx="48" cy="46" r="3.6" fill={node} />
     </Svg>
   );
 }
