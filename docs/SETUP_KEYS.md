@@ -118,8 +118,22 @@ npx supabase functions deploy resolve-predictions --no-verify-jwt
 select cron.schedule('resolve-predictions','17 3 * * *', $$
   select net.http_post(
     url:='https://aanhvekseyfsecezxgne.supabase.co/functions/v1/resolve-predictions',
-    headers:='{"x-cron-secret":"YOUR_CRON_SECRET"}'::jsonb) $$);
+    headers:='{"x-cron-secret":"YOUR_CRON_SECRET"}'::jsonb,
+    timeout_milliseconds:=30000) $$);
 ```
+**DONE — scheduled 2026-07-20** (migrations `20260720220000` + `20260720223000`), verified
+live: `{"ok":true,"resolved":0}`. Three traps worth knowing if you ever re-do this:
+- `--no-verify-jwt` is **not optional**. Without it the API gateway rejects the cron call
+  with `UNAUTHORIZED_NO_AUTH_HEADER` before your code runs, and the CRON_SECRET check
+  never even executes.
+- `cron.job_run_details` reporting **`succeeded` means nothing** here — it only records that
+  `net.http_post` was enqueued. The real result is in `net._http_response` (`status_code`,
+  `content`). A job can "succeed" while 401ing forever. That is exactly how a stale
+  `sync-markets` job sat there failing every 15 minutes unnoticed.
+- pg_net's default timeout is **5s**, shorter than a full sync/resolve run, so responses
+  land as NULL-status timeout rows even when the function completes. Pass
+  `timeout_milliseconds` if you want to see the status.
+
 Every real AI analysis now logs ODDIQ's probability vs the market's; the resolver scores them as markets settle. Read the rolling record from the `track_record` view — the app shows it (in the pre-signup sample + wherever surfaced) once ≥20 predictions have resolved.
 
 ---
