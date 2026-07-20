@@ -501,10 +501,22 @@ Deno.serve(async (req: Request) => {
   const publicSources = sources.map((s) => ({ title: s.title, url: s.url, date: s.date ?? null }));
 
   // 3) Ensure the market exists (ai_analysis FK), then cache.
+  //
+  // The `market` payload is CLIENT-SUPPLIED. It must never overwrite a row we
+  // synced ourselves: `markets` is world-readable and shared, so an upsert here
+  // would let any authenticated client rewrite titles, prices and volumes for
+  // every other user. Insert only when we've never seen the market.
   const platform = market.id.startsWith('kalshi:') ? 'kalshi' : 'polymarket';
   const externalId = market.id.includes(':') ? market.id.slice(market.id.indexOf(':') + 1) : market.id;
-  const { error: marketErr } = await supabase.from('markets').upsert(
-    {
+  const { data: knownMarket } = await supabase
+    .from('markets')
+    .select('probability')
+    .eq('id', market.id)
+    .maybeSingle();
+
+  let marketErr = null;
+  if (!knownMarket) {
+    const { error } = await supabase.from('markets').insert({
       id: market.id,
       external_id: externalId,
       platform,
@@ -514,9 +526,10 @@ Deno.serve(async (req: Request) => {
       change_24h: market.change24h,
       volume: market.volume,
       updated_at: new Date().toISOString(),
-    },
-    { onConflict: 'id' },
-  );
+    });
+    // A concurrent insert winning the race is fine; the row exists either way.
+    marketErr = error && !String(error.message).includes('duplicate') ? error : null;
+  }
 
   const { error: writeErr } = await supabase.from('ai_analysis').upsert(
     {
@@ -539,15 +552,19 @@ Deno.serve(async (req: Request) => {
   // 4) Log the prediction for the track record (only real generations, and
   //    only when the model gave a usable probability estimate).
   const est = typeof parsed.ai_probability_estimate === 'number' ? parsed.ai_probability_estimate : null;
+  // Server-side truth for the market price when we have it.
+  const baselineProbability = Number(knownMarket?.probability ?? market.probability);
   if (est != null) {
-    const gap = est - market.probability;
+    const gap = est - baselineProbability;
     const direction = gap > 0.03 ? 'higher' : gap < -0.03 ? 'lower' : 'inline';
     await supabase.from('ai_predictions').insert({
       market_id: market.id,
       title: market.title,
       category: market.category,
       ai_probability: est,
-      market_probability: market.probability,
+      // The baseline we claim to have beaten must come from OUR synced record,
+      // not the client payload - otherwise the track record is client-writable.
+      market_probability: baselineProbability,
       edge_gap: gap,
       direction,
       depth,
