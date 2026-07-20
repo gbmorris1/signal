@@ -77,12 +77,17 @@ create table if not exists ai_analysis (
 --   alter table ai_analysis add column if not exists sources jsonb not null default '[]';
 
 -- ── watchlists ──────────────────────────────────────────────────────────────
+-- NOTE: market_id is deliberately NOT a foreign key to markets. `markets` is
+-- RLS select-only for clients, so a client can't create a row there; an FK would
+-- make it impossible to watch any market the sync hasn't ingested yet. The
+-- watchlist only needs the id — market data is read from the source API.
 create table if not exists watchlists (
   user_id    uuid not null references users(id) on delete cascade,
-  market_id  text not null references markets(id) on delete cascade,
+  market_id  text not null,
   created_at timestamptz not null default now(),
   primary key (user_id, market_id)
 );
+create index if not exists watchlists_market_idx on watchlists(market_id);
 
 -- ── alerts ──────────────────────────────────────────────────────────────────
 create table if not exists alerts (
