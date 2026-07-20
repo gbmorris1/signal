@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Animated, Easing, PanResponder, Text, View, StyleSheet } from 'react-native';
 import Svg, { Path, Circle, Line, Defs, LinearGradient, Stop } from 'react-native-svg';
 import * as Haptics from 'expo-haptics';
-import { colors, radius, spacing, typography } from '@/theme';
+import { colors, motion, radius, spacing, typography } from '@/theme';
 import type { MarketSnapshot } from '@/types';
 
 const AnimatedPath = Animated.createAnimatedComponent(Path);
@@ -85,7 +85,7 @@ export function ProbabilityChart({
     Animated.sequence([
       Animated.timing(dash, {
         toValue: 0,
-        duration: 900,
+        duration: motion.chart,
         easing: Easing.out(Easing.cubic),
         useNativeDriver: false, // SVG props aren't native-driver animatable
       }),

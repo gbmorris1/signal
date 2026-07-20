@@ -1,15 +1,30 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { Animated, Easing, Text, type StyleProp, type TextStyle, type ViewStyle } from 'react-native';
+import {
+  Animated,
+  Easing,
+  Text,
+  type StyleProp,
+  type TextStyle,
+  type ViewStyle,
+} from 'react-native';
+import { motion, typography } from '@/theme';
 
 /**
- * Count-up number. Eases from 0 (or the previous value) to `value` with an
- * ease-out cubic - the terminal "numbers landing" feel. Format controls the
- * rendered string ("43%", "+8%", "1,204").
+ * One timing language for the whole app, driven by the theme's motion tokens:
+ * everything enters on the same ease-out curve, at the same speed, with the
+ * same stagger. That consistency is what makes motion read as choreography
+ * rather than as a pile of individual effects.
+ */
+const EASE = Easing.bezier(...motion.easeOut);
+
+/**
+ * Count-up number. Eases to `value` — the terminal "numbers landing" feel.
+ * Format controls the rendered string ("43%", "+8", "1,204").
  */
 export function AnimatedNumber({
   value,
   format = (v) => String(Math.round(v)),
-  duration = 700,
+  duration = motion.base,
   style,
 }: {
   value: number;
@@ -41,12 +56,12 @@ export function AnimatedNumber({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [value, duration]);
 
-  return <Text style={style}>{display}</Text>;
+  return <Text style={[{ fontVariant: typography.stat.fontVariant }, style]}>{display}</Text>;
 }
 
 /**
  * Fade + rise entrance. Wrap list items and pass their index for a stagger.
- * Animates once on mount only.
+ * Animates once on mount.
  */
 export function Enter({
   index = 0,
@@ -57,32 +72,54 @@ export function Enter({
   children: ReactNode;
   style?: StyleProp<ViewStyle>;
 }) {
-  const opacity = useRef(new Animated.Value(0)).current;
-  const translateY = useRef(new Animated.Value(14)).current;
+  const t = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    const delay = Math.min(index, 8) * 55;
-    Animated.parallel([
-      Animated.timing(opacity, {
-        toValue: 1,
-        duration: 380,
-        delay,
-        easing: Easing.out(Easing.cubic),
-        useNativeDriver: true,
-      }),
-      Animated.timing(translateY, {
-        toValue: 0,
-        duration: 380,
-        delay,
-        easing: Easing.out(Easing.cubic),
-        useNativeDriver: true,
-      }),
-    ]).start();
+    Animated.timing(t, {
+      toValue: 1,
+      duration: motion.base,
+      // Cap the stagger so a long list never feels like it's loading slowly.
+      delay: Math.min(index, 8) * motion.stagger,
+      easing: EASE,
+      useNativeDriver: true,
+    }).start();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const translateY = t.interpolate({ inputRange: [0, 1], outputRange: [10, 0] });
+
   return (
-    <Animated.View style={[style, { opacity, transform: [{ translateY }] }]}>
+    <Animated.View style={[style, { opacity: t, transform: [{ translateY }] }]}>
+      {children}
+    </Animated.View>
+  );
+}
+
+/**
+ * Screen-level entrance: one settling motion for a whole view, for places
+ * where a staggered list would be wrong (detail screens, sheets).
+ */
+export function EnterScreen({
+  children,
+  style,
+}: {
+  children: ReactNode;
+  style?: StyleProp<ViewStyle>;
+}) {
+  const t = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.timing(t, {
+      toValue: 1,
+      duration: motion.slow,
+      easing: EASE,
+      useNativeDriver: true,
+    }).start();
+  }, [t]);
+
+  const translateY = t.interpolate({ inputRange: [0, 1], outputRange: [14, 0] });
+  return (
+    <Animated.View style={[style, { opacity: t, transform: [{ translateY }] }]}>
       {children}
     </Animated.View>
   );

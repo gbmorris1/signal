@@ -13,7 +13,7 @@ import {
   View,
 } from 'react-native';
 import * as Haptics from 'expo-haptics';
-import { colors, radius } from '@/theme';
+import { colors, radius, typography } from '@/theme';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
@@ -157,5 +157,5 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  actionText: { color: '#fff', fontWeight: '700', fontSize: 13 },
+  actionText: { ...typography.ticker, fontSize: 9, color: '#fff' },
 });

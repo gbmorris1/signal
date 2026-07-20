@@ -25,6 +25,7 @@ import { OutcomeSplit } from '@/components/OutcomeSplit';
 import { ProbabilityGauge } from '@/components/ProbabilityGauge';
 import { ExternalLinkSheet } from '@/components/ExternalLinkSheet';
 import { Bone } from '@/components/Skeleton';
+import { EdgeMeter } from '@/components/EdgeMeter';
 import { PlatformLogo } from '@/components/PlatformLogo';
 import { Enter } from '@/components/motion';
 import { SignalChip, PlatformBadge } from '@/components/Chip';
@@ -402,6 +403,7 @@ export default function MarketDetailScreen() {
         <Enter>
           <Analysis
             analysis={analysis}
+            marketProbability={market.probability}
             onCite={onCite}
             highlightedSource={highlightedSource}
           />
@@ -471,10 +473,12 @@ function AnalysisSkeleton({ tier }: { tier: string }) {
 
 function Analysis({
   analysis,
+  marketProbability,
   onCite,
   highlightedSource,
 }: {
   analysis: AIAnalysis;
+  marketProbability: number;
   onCite: (n: number) => void;
   highlightedSource: number | null;
 }) {
@@ -490,6 +494,14 @@ function Analysis({
             <Text style={styles.freshness}>Updated {timeAgo(analysis.createdAt)}</Text>
           </View>
           <CitedText text={analysis.edge} style={styles.edgeBody} onCite={onCite} />
+          {analysis.aiProbabilityEstimate != null && (
+            <View style={styles.meterWrap}>
+              <EdgeMeter
+                marketProbability={marketProbability}
+                oddiqProbability={analysis.aiProbabilityEstimate}
+              />
+            </View>
+          )}
         </View>
       ) : null}
       <Block title="Summary" body={analysis.summary} onCite={onCite} />
@@ -793,6 +805,7 @@ const styles = StyleSheet.create({
   edgeHead: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
   edgeLabel: { ...typography.ticker, color: colors.accent },
   edgeBody: { ...typography.prose, color: colors.text, fontSize: 15, lineHeight: 24 },
+  meterWrap: { marginTop: spacing.sm, paddingTop: spacing.md, borderTopColor: colors.accentEdge, borderTopWidth: 1 },
   freshness: { ...typography.ticker, fontSize: 8, color: colors.textFaint },
   citation: { ...typography.stat, fontSize: 11, color: colors.accent },
   sourceRow: {

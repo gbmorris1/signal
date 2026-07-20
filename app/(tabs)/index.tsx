@@ -282,7 +282,7 @@ const styles = StyleSheet.create({
   },
   sectionLabel: { ...typography.kicker, color: colors.textFaint },
   howBtn: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  howText: { fontSize: 12, color: colors.textFaint, fontWeight: '600' },
+  howText: { ...typography.ticker, fontSize: 8.5, color: colors.textFaint },
   demoBanner: {
     backgroundColor: colors.accentDim,
     borderColor: colors.accent,
@@ -291,7 +291,7 @@ const styles = StyleSheet.create({
     padding: spacing.md,
     marginBottom: spacing.lg,
   },
-  demoText: { color: colors.text, ...typography.caption, fontWeight: '600' },
+  demoText: { ...typography.ticker, fontSize: 9, color: colors.accent },
   empty: { alignItems: 'center', gap: spacing.sm, marginTop: spacing.xxl, paddingHorizontal: spacing.xl },
   emptyTitle: { ...typography.heading, color: colors.textMuted },
   emptyBody: { ...typography.caption, color: colors.textFaint, textAlign: 'center', lineHeight: 18 },
@@ -302,7 +302,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
     marginTop: spacing.md,
   },
-  emptyCtaText: { color: colors.bg, fontWeight: '700' },
+  emptyCtaText: { ...typography.button, color: colors.bg },
   backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.72)', justifyContent: 'flex-end' },
   sheet: {
     backgroundColor: colors.surface,
@@ -326,5 +326,5 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
     alignItems: 'center',
   },
-  sheetCloseText: { color: colors.bg, fontWeight: '700' },
+  sheetCloseText: { ...typography.button, color: colors.bg },
 });

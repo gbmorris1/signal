@@ -1,6 +1,6 @@
 import { Text, View, StyleSheet } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
-import { colors } from '@/theme';
+import { colors, typography } from '@/theme';
 
 function arcPath(cx: number, cy: number, r: number, startDeg: number, endDeg: number): string {
   const rad = (d: number) => ((d - 90) * Math.PI) / 180;
@@ -60,5 +60,5 @@ export function ProbabilityGauge({
 
 const styles = StyleSheet.create({
   center: { alignItems: 'center', justifyContent: 'center', paddingTop: 8 },
-  value: { fontSize: 20, fontWeight: '700', fontVariant: ['tabular-nums'], letterSpacing: -0.4 },
+  value: { ...typography.statLarge, fontSize: 19 },
 });

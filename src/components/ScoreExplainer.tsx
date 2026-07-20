@@ -112,7 +112,7 @@ const styles = StyleSheet.create({
   component: { gap: spacing.xs },
   componentHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' },
   componentLabel: { ...typography.bodyStrong, color: colors.text },
-  weight: { ...typography.caption, color: colors.textFaint, fontWeight: '400' },
+  weight: { ...typography.caption, color: colors.textFaint },
   componentValue: { ...typography.stat, color: colors.textMuted },
   barTrack: {
     height: 6,
@@ -129,5 +129,5 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
     alignItems: 'center',
   },
-  closeText: { color: colors.bg, fontWeight: '700' },
+  closeText: { ...typography.button, color: colors.bg },
 });

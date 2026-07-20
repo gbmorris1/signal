@@ -40,7 +40,7 @@ export default function SpreadsScreen() {
             <Text style={styles.introText}>
               The same question priced differently on Polymarket vs Kalshi, biggest gap first. A wide
               spread often means the two markets resolve on{' '}
-              <Text style={{ color: colors.text, fontWeight: '700' }}>different criteria</Text>, so
+              <Text style={{ color: colors.text, fontFamily: typography.heading.fontFamily }}>different criteria</Text>, so
               read both before assuming it's free money.
             </Text>
           </View>
