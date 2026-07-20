@@ -1,18 +1,21 @@
 import type { Category, Market, MarketHistory, MarketDataSource } from '@/types';
 import { mapPolymarketMarket, isLiveProbability, type PolymarketRaw } from './polymarketMap';
-import { MockSource } from './mockSource';
+import { mockHistory } from '@/data/mockMarkets';
 
 const GAMMA_BASE = 'https://gamma-api.polymarket.com';
 const CLOB_BASE = 'https://clob.polymarket.com';
 
 /**
- * Live Polymarket data via the public Gamma API. Defensive: any network/parse
- * failure falls back to MockSource so the UI never breaks. History is
- * synthesized locally until we persist snapshots server-side.
+ * Live Polymarket data via the public Gamma API.
+ *
+ * On failure it degrades to the last GOOD LIVE response, never to mock data.
+ * This is a research product: showing fabricated markets styled as real prices
+ * would be worse than showing nothing, and any analysis run against a fake
+ * market would also be logged into the track record. Same contract as
+ * KalshiSource. Real mock data is only ever served by MockSource in dev mode.
  */
 export class PolymarketSource implements MarketDataSource {
   readonly platform = 'polymarket' as const;
-  private fallback = new MockSource();
   private cache: Market[] = [];
 
   async listMarkets(params?: { category?: Category; query?: string }): Promise<Market[]> {
@@ -29,7 +32,7 @@ export class PolymarketSource implements MarketDataSource {
       if (markets.length === 0) throw new Error('empty');
       this.cache = markets;
     } catch {
-      markets = await this.fallback.listMarkets();
+      markets = this.cache; // stale-but-real beats fabricated; [] on first failure
     }
 
     if (params?.category) markets = markets.filter((m) => m.category === params.category);
@@ -44,7 +47,7 @@ export class PolymarketSource implements MarketDataSource {
     const cached = this.cache.find((m) => m.id === id);
     if (cached) return cached;
     const all = await this.listMarkets();
-    return all.find((m) => m.id === id) ?? this.fallback.getMarket(id);
+    return all.find((m) => m.id === id) ?? null;
   }
 
   async getHistory(id: string): Promise<MarketHistory> {
@@ -69,6 +72,9 @@ export class PolymarketSource implements MarketDataSource {
         /* fall through to synthetic */
       }
     }
-    return this.fallback.getHistory(id);
+    // Synthetic curve, explicitly flagged so the UI can label it a simulated
+    // preview. Unlike prices, an unlabelled placeholder chart isn't presented
+    // as fact.
+    return { snapshots: mockHistory(id), synthetic: true };
   }
 }
