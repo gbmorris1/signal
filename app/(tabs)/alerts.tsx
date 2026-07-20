@@ -108,7 +108,6 @@ export default function AlertsScreen() {
         </Enter>
       )}
       SectionSeparatorComponent={() => <View style={{ height: spacing.sm }} />}
-      ItemSeparatorComponent={() => <View style={{ height: spacing.md }} />}
       ListEmptyComponent={
         isLoading ? null : (
           <View style={styles.empty}>
@@ -165,29 +164,39 @@ function AlertRow({ alert, onPress }: { alert: Alert; onPress: () => void }) {
 }
 
 const styles = StyleSheet.create({
-  content: { padding: spacing.lg, paddingBottom: spacing.xxl, flexGrow: 1 },
-  markAllRow: { alignSelf: 'flex-end', paddingVertical: spacing.xs, marginBottom: spacing.xs },
-  markAllText: { fontSize: 12, fontWeight: '700', color: colors.accent },
-  dayLabel: { ...typography.kicker, color: colors.textFaint, marginBottom: spacing.sm, marginTop: spacing.sm },
+  content: { paddingBottom: spacing.xxl, flexGrow: 1 },
+  markAllRow: { alignSelf: 'flex-end', paddingVertical: spacing.sm, paddingHorizontal: spacing.lg },
+  markAllText: { ...typography.ticker, color: colors.accent },
+  dayLabel: {
+    ...typography.ticker,
+    color: colors.textFaint,
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.lg,
+    paddingBottom: spacing.sm,
+  },
+  // Alerts are ruled rows; state is carried by ground + stripe, not chrome.
   card: {
-    ...card,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    borderBottomColor: colors.rule,
+    borderBottomWidth: 1,
     gap: spacing.sm,
   },
-  cardUnread: { backgroundColor: colors.surfaceElevated },
-  cardRead: { backgroundColor: colors.bg, opacity: 0.62 },
-  textRead: { color: colors.textMuted, fontWeight: '400' },
+  cardUnread: { backgroundColor: colors.surface },
+  cardRead: { opacity: 0.5 },
+  textRead: { color: colors.textMuted },
   badgeRead: { opacity: 0.6 },
   rowTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   badgeRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  unreadDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: colors.accent },
-  badge: { fontSize: 10, fontWeight: '700', letterSpacing: 0.5, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4, overflow: 'hidden' },
+  unreadDot: { width: 5, height: 5, borderRadius: 1, backgroundColor: colors.accent },
+  badge: { ...typography.ticker, fontSize: 8.5, paddingHorizontal: 6, paddingVertical: 2, borderRadius: radius.xs, overflow: 'hidden' },
   badgeAi: { color: colors.bg, backgroundColor: colors.accent },
   badgeVol: { color: colors.bg, backgroundColor: colors.warn },
-  badgeMove: { color: colors.textMuted, backgroundColor: colors.surfaceElevated },
-  time: { color: colors.textFaint, fontSize: 12 },
+  badgeMove: { color: colors.textMuted, backgroundColor: colors.surfaceHigh },
+  time: { ...typography.ticker, fontSize: 8.5, color: colors.textFaint },
   alertTitle: { ...typography.heading, color: colors.text },
-  body: { ...typography.body, color: colors.textMuted, lineHeight: 20 },
-  viewLink: { fontSize: 12, color: colors.accent, fontWeight: '600' },
+  body: { ...typography.prose, fontSize: 13, color: colors.textMuted },
+  viewLink: { ...typography.ticker, fontSize: 8.5, color: colors.accent },
   empty: { alignItems: 'center', gap: spacing.sm, marginTop: spacing.xxl, paddingHorizontal: spacing.xl },
   emptyTitle: { ...typography.heading, color: colors.textMuted },
   emptyBody: { ...typography.caption, color: colors.textFaint, textAlign: 'center', lineHeight: 18 },

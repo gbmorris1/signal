@@ -55,11 +55,13 @@ export default function EventScreen() {
       ListHeaderComponent={
         <Enter>
           <Stack.Screen options={{ title: 'Event' }} />
-          <View style={styles.headMeta}>
-            <PlatformBadge platform={leader.platform} size="md" />
-            <Text style={styles.count}>{group.outcomes.length} outcomes</Text>
+          <View style={styles.head}>
+            <View style={styles.headMeta}>
+              <PlatformBadge platform={leader.platform} size="md" />
+              <Text style={styles.count}>{group.outcomes.length} outcomes</Text>
+            </View>
+            <Text style={styles.title}>{group.title}</Text>
           </View>
-          <Text style={styles.title}>{group.title}</Text>
           <View style={styles.statStrip}>
             <View style={styles.statCell}>
               <Text style={styles.statValue}>{Math.round(leader.probability * 100)}%</Text>
@@ -71,7 +73,7 @@ export default function EventScreen() {
               <Text style={styles.statLabel}>total volume</Text>
             </View>
           </View>
-          <Text style={styles.sectionLabel}>OUTCOMES</Text>
+          <Text style={styles.sectionLabel}>The field</Text>
         </Enter>
       }
       renderItem={({ item, index }) => (
@@ -79,7 +81,6 @@ export default function EventScreen() {
           <OutcomeRow outcome={item} rank={index + 1} />
         </Enter>
       )}
-      ItemSeparatorComponent={() => <View style={{ height: spacing.sm }} />}
     />
   );
 }
@@ -121,34 +122,44 @@ function OutcomeRow({ outcome, rank }: { outcome: Market; rank: number }) {
 }
 
 const styles = StyleSheet.create({
-  content: { padding: spacing.lg, paddingBottom: spacing.xxl },
-  loading: { flex: 1, backgroundColor: colors.bg, padding: spacing.lg },
-  headMeta: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  count: { ...typography.caption, color: colors.textFaint },
-  title: { ...typography.title, color: colors.text, marginTop: spacing.sm, lineHeight: 26 },
+  content: { paddingBottom: spacing.xxl },
+  loading: { flex: 1, backgroundColor: colors.bg },
+  head: { paddingHorizontal: spacing.lg, paddingTop: spacing.md },
+  headMeta: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  count: { ...typography.ticker, color: colors.textFaint },
+  title: { ...typography.title, color: colors.text, marginTop: spacing.sm },
   statStrip: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.surface,
-    borderColor: colors.border,
-    borderWidth: 1,
-    borderRadius: radius.lg,
+    borderTopColor: colors.rule,
+    borderTopWidth: 1,
+    borderBottomColor: colors.rule,
+    borderBottomWidth: 1,
     paddingVertical: spacing.md,
     marginTop: spacing.lg,
   },
-  statCell: { flex: 1, alignItems: 'center' },
-  statValue: { ...typography.statLarge, color: colors.text, fontSize: 20 },
-  statLabel: { fontSize: 10, color: colors.textFaint, marginTop: 2 },
-  statDivider: { width: 1, height: 26, backgroundColor: colors.border },
-  sectionLabel: { ...typography.kicker, color: colors.textFaint, marginTop: spacing.xl, marginBottom: spacing.sm },
-  row: { ...card, flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingVertical: spacing.md },
-  rank: { ...typography.stat, fontSize: 14, color: colors.textFaint, width: 16, textAlign: 'center' },
-  label: { ...typography.bodyStrong, color: colors.text, fontSize: 15 },
-  barTrack: { height: 6, borderRadius: 3, backgroundColor: colors.surfaceElevated, overflow: 'hidden' },
-  barFill: { height: 6, borderRadius: 3 },
-  rowRight: { alignItems: 'flex-end', minWidth: 48 },
-  prob: { ...typography.stat, color: colors.text, fontSize: 16 },
-  delta: { fontSize: 11, fontWeight: '700', fontVariant: ['tabular-nums'] },
+  statCell: { flex: 1, alignItems: 'center', gap: 3 },
+  statValue: { ...typography.statLarge, fontSize: 19, color: colors.text },
+  statLabel: { ...typography.ticker, fontSize: 8.5, color: colors.textFaint },
+  statDivider: { width: 1, height: 26, backgroundColor: colors.rule },
+  sectionLabel: { ...typography.ticker, color: colors.accent, marginTop: spacing.lg, marginBottom: spacing.sm, paddingHorizontal: spacing.lg },
+  // Leaderboard lines: rank in mono, name in serif, bar + percentage.
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    borderBottomColor: colors.rule,
+    borderBottomWidth: 1,
+  },
+  rank: { ...typography.stat, fontSize: 12, color: colors.textFaint, width: 14, textAlign: 'center' },
+  label: { ...typography.heading, fontSize: 15, color: colors.text },
+  barTrack: { height: 4, backgroundColor: colors.surfaceHigh, borderRadius: radius.xs, overflow: 'hidden' },
+  barFill: { height: 4, borderRadius: radius.xs },
+  rowRight: { alignItems: 'flex-end', minWidth: 46, gap: 2 },
+  prob: { ...typography.stat, fontSize: 15, color: colors.text },
+  delta: { ...typography.statSmall, fontSize: 10.5 },
   empty: { flex: 1, backgroundColor: colors.bg, alignItems: 'center', justifyContent: 'center', gap: spacing.sm, padding: spacing.xl },
   emptyTitle: { ...typography.heading, color: colors.textMuted },
   emptyBody: { ...typography.caption, color: colors.textFaint, textAlign: 'center', lineHeight: 18 },

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Text, View, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, radius, spacing, typography, shadows } from '@/theme';
+import { colors, radius, spacing, typography } from '@/theme';
 import { getTrackRecord, type TrackRecord } from '@/services/trackRecord';
 
 // A concrete, real-shaped example shown BEFORE signup so the value lands in
@@ -20,7 +20,7 @@ export function ExampleEdge() {
   }, []);
 
   return (
-    <View style={[styles.card, shadows.accentEdge]}>
+    <View style={styles.card}>
       <View style={styles.head}>
         <Ionicons name="flash" size={13} color={colors.accent} />
         <Text style={styles.kicker}>SAMPLE ODDIQ EDGE</Text>
@@ -54,29 +54,30 @@ export function ExampleEdge() {
 }
 
 const styles = StyleSheet.create({
+  // A pull-quote: accent rule down the spine, no card.
   card: {
+    borderLeftWidth: 2,
+    borderLeftColor: colors.accent,
     backgroundColor: colors.accentDim,
-    borderColor: colors.accent,
-    borderWidth: 1,
-    borderRadius: radius.lg,
-    padding: spacing.md,
-    gap: spacing.xs,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+    gap: spacing.sm,
   },
   head: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  kicker: { ...typography.kicker, color: colors.accent, fontSize: 10 },
+  kicker: { ...typography.ticker, fontSize: 8.5, color: colors.accent },
   title: { ...typography.heading, color: colors.text },
-  compareRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
-  compareCell: { alignItems: 'center' },
-  compareVal: { ...typography.statLarge, color: colors.text, fontSize: 18 },
-  compareLbl: { fontSize: 10, color: colors.textFaint },
+  compareRow: { flexDirection: 'row', alignItems: 'baseline', gap: spacing.lg },
+  compareCell: { alignItems: 'flex-start' },
+  compareVal: { ...typography.statLarge, fontSize: 19, color: colors.text },
+  compareLbl: { ...typography.ticker, fontSize: 8, color: colors.textFaint, marginTop: 2 },
   gapPill: {
     marginLeft: 'auto',
-    backgroundColor: colors.upDim,
-    borderRadius: radius.pill,
+    backgroundColor: colors.surfaceHigh,
+    borderRadius: radius.xs,
     paddingHorizontal: spacing.sm,
-    paddingVertical: 3,
+    paddingVertical: 2,
   },
-  gapText: { color: colors.up, fontSize: 12, fontWeight: '700' },
-  edge: { ...typography.caption, color: colors.textMuted, lineHeight: 18 },
-  record: { fontSize: 11, color: colors.up, fontWeight: '700', marginTop: 2 },
+  gapText: { ...typography.stat, fontSize: 11, color: colors.accent },
+  edge: { ...typography.prose, fontSize: 13, color: colors.textMuted },
+  record: { ...typography.ticker, fontSize: 8.5, color: colors.accent },
 });

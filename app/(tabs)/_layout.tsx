@@ -1,7 +1,7 @@
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
-import { colors } from '@/theme';
+import { colors, typography } from '@/theme';
 
 const ICONS: Record<string, { on: keyof typeof Ionicons.glyphMap; off: keyof typeof Ionicons.glyphMap }> = {
   index: { on: 'pulse', off: 'pulse-outline' },
@@ -21,20 +21,21 @@ export default function TabsLayout() {
         headerStyle: { backgroundColor: colors.bg },
         headerTintColor: colors.text,
         headerShadowVisible: false,
-        headerTitleStyle: { fontWeight: '700', letterSpacing: -0.3 },
+        // Screen titles are mastheads: serif, like the publication it is.
+        headerTitleStyle: { fontFamily: typography.title.fontFamily, fontSize: 17 },
         sceneStyle: { backgroundColor: colors.bg },
         tabBarStyle: {
           backgroundColor: colors.bg,
-          borderTopColor: colors.border,
-          borderTopWidth: 0.5,
+          borderTopColor: colors.rule,
+          borderTopWidth: 1,
         },
-        tabBarActiveTintColor: colors.text,
+        tabBarActiveTintColor: colors.accent,
         tabBarInactiveTintColor: colors.textFaint,
         // A 5-tab bar has no room to reflow at accessibility text sizes -
         // the label wraps/clips before the tab bar itself can grow. This is
         // the same call iOS's own Tab Bar effectively makes.
         tabBarAllowFontScaling: false,
-        tabBarLabelStyle: { fontSize: 10, fontWeight: '600' },
+        tabBarLabelStyle: { ...typography.ticker, fontSize: 8.5 },
         tabBarIcon: ({ color, focused }) => {
           const icon = ICONS[route.name];
           return <Ionicons name={focused ? icon.on : icon.off} size={22} color={color} />;

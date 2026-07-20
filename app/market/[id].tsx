@@ -15,7 +15,7 @@ import { router, useLocalSearchParams, Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
-import { colors, radius, spacing, typography, card, shadows, buttonPrimary } from '@/theme';
+import { colors, radius, spacing, typography, buttonPrimary } from '@/theme';
 import { getMarketSource, getCombinedSource } from '@/services/markets';
 import { generateAnalysis, isGated } from '@/services/ai';
 import { track } from '@/lib/analytics';
@@ -241,7 +241,7 @@ export default function MarketDetailScreen() {
         </View>
         <Text style={styles.title}>{market.title}</Text>
 
-        <View style={[styles.card, styles.headlineCard, up ? shadows.none : shadows.none]}>
+        <View style={[styles.card, styles.headlineCard]}>
           <ProbabilityGauge probability={market.probability} up={up} />
           <View style={{ flex: 1, gap: spacing.md }}>
             <OutcomeSplit market={market} size="lg" />
@@ -482,7 +482,7 @@ function Analysis({
   return (
     <View style={{ gap: spacing.md }}>
       {analysis.edge ? (
-        <View style={[styles.card, styles.edgeCard, shadows.accentEdge]}>
+        <View style={[styles.card, styles.edgeCard]}>
           <View style={styles.edgeHead}>
             <Ionicons name="flash" size={15} color={colors.accent} />
             <Text style={styles.edgeLabel}>ODDIQ'S EDGE</Text>
@@ -702,109 +702,129 @@ function CompareRow({
 }
 
 const styles = StyleSheet.create({
-  content: { padding: spacing.lg, paddingBottom: spacing.xxxl, gap: spacing.md },
+  content: { padding: spacing.lg, paddingBottom: spacing.xxxl, gap: spacing.lg },
   loading: { flex: 1, backgroundColor: colors.bg, padding: spacing.lg, gap: spacing.md },
-  badgeRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  badgeRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   saveStar: {
     width: 34,
     height: 34,
-    borderRadius: 17,
+    borderRadius: radius.xs,
     borderWidth: 1,
-    borderColor: colors.borderStrong,
+    borderColor: colors.ruleStrong,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  saveStarOn: { backgroundColor: colors.warn, borderColor: colors.warn },
-  title: { ...typography.title, color: colors.text, lineHeight: 27, marginTop: spacing.md },
-  card: { ...card, gap: spacing.sm },
-  headlineCard: { flexDirection: 'row', alignItems: 'center', gap: spacing.lg, marginTop: spacing.md },
-  moveLine: { fontSize: 12, fontWeight: '700', fontVariant: ['tabular-nums'] },
+  saveStarOn: { backgroundColor: colors.accent, borderColor: colors.accent },
+  // The question is the headline of the piece.
+  title: { ...typography.title, color: colors.text, marginTop: spacing.md },
+  card: { paddingVertical: spacing.lg, borderTopColor: colors.rule, borderTopWidth: 1, gap: spacing.sm },
+  headlineCard: { flexDirection: 'row', alignItems: 'center', gap: spacing.lg, marginTop: spacing.md, borderTopWidth: 0 },
+  moveLine: { ...typography.statSmall, fontSize: 12 },
+  // Ruled masthead strip, no card.
   statStrip: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.surface,
-    borderColor: colors.border,
-    borderWidth: 1,
-    borderRadius: radius.lg,
+    borderTopColor: colors.rule,
+    borderTopWidth: 1,
+    borderBottomColor: colors.rule,
+    borderBottomWidth: 1,
     paddingVertical: spacing.md,
     marginTop: spacing.md,
   },
-  statCell: { flex: 1, alignItems: 'center', gap: 2 },
-  statDivider: { width: 1, height: 28, backgroundColor: colors.border },
-  statValue: { ...typography.statLarge, fontSize: 17, color: colors.text },
-  statLabel: { fontSize: 10, color: colors.textFaint, letterSpacing: 0.3 },
+  statCell: { flex: 1, alignItems: 'center', gap: 3 },
+  statDivider: { width: 1, height: 26, backgroundColor: colors.rule },
+  statValue: { ...typography.statLarge, fontSize: 18, color: colors.text },
+  statLabel: { ...typography.ticker, fontSize: 8.5, color: colors.textFaint },
   scoreLabelRow: { flexDirection: 'row', alignItems: 'center', gap: 3 },
-  chartCard: { ...card, gap: spacing.sm },
+  chartCard: { paddingTop: spacing.lg, borderTopColor: colors.rule, borderTopWidth: 1, gap: spacing.sm },
   chartHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  cardLabel: { ...typography.bodyStrong, color: colors.textMuted, fontSize: 13 },
-  cardBody: { ...typography.body, color: colors.text, lineHeight: 21 },
-  syntheticTag: { fontSize: 9, fontWeight: '700', letterSpacing: 0.8, color: colors.warn },
-  scrubHint: { fontSize: 10, color: colors.textFaint, fontStyle: 'italic' },
-  aboutText: { ...typography.body, color: colors.textMuted, lineHeight: 21 },
-  aboutMore: { fontSize: 12, fontWeight: '700', color: colors.accent, marginTop: 2 },
+  cardLabel: { ...typography.ticker, color: colors.textFaint },
+  cardBody: { ...typography.prose, color: colors.text },
+  syntheticTag: { ...typography.ticker, fontSize: 8.5, color: colors.warn },
+  scrubHint: { ...typography.ticker, fontSize: 8.5, color: colors.textGhost },
+  aboutText: { ...typography.prose, color: colors.textMuted },
+  aboutMore: { ...typography.caption, color: colors.accent, marginTop: 2 },
   compareEmpty: { ...typography.caption, color: colors.textMuted, lineHeight: 18 },
-  thisMarket: { fontSize: 11, color: colors.textFaint, fontStyle: 'italic' },
+  thisMarket: { ...typography.ticker, fontSize: 8.5, color: colors.textFaint },
   externalBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 6,
+    gap: 8,
     borderWidth: 1,
-    borderRadius: radius.md,
+    borderRadius: radius.xs,
     paddingVertical: spacing.md,
-    marginTop: spacing.xs,
+    marginTop: spacing.sm,
   },
-  externalText: { fontSize: 13, fontWeight: '700' },
-  brandGlyph: { width: 20, height: 20, borderRadius: 5, alignItems: 'center', justifyContent: 'center' },
-  aiHeader: { marginTop: spacing.md, gap: 2 },
-  sectionKicker: { ...typography.kicker, color: colors.textFaint },
-  aiDisclaimer: { fontSize: 11, color: colors.textFaint },
+  externalText: { ...typography.button, fontSize: 13 },
+  brandGlyph: { width: 20, height: 20, borderRadius: radius.xs, alignItems: 'center', justifyContent: 'center' },
+  aiHeader: { marginTop: spacing.lg, gap: 3, borderTopColor: colors.rule, borderTopWidth: 1, paddingTop: spacing.lg },
+  sectionKicker: { ...typography.ticker, color: colors.accent },
+  aiDisclaimer: { ...typography.caption, fontSize: 11, color: colors.textFaint },
   gateCard: {
-    ...card,
-    borderColor: colors.accent,
+    borderColor: colors.accentEdge,
+    borderWidth: 1,
+    borderRadius: radius.xs,
+    padding: spacing.lg,
     gap: spacing.sm,
   },
   gateTitle: { ...typography.heading, color: colors.text },
-  edgeCard: { borderColor: colors.accent, backgroundColor: colors.accentDim, gap: spacing.sm },
-  upsellCard: { borderColor: colors.borderStrong, marginTop: spacing.md },
-  upsellTitle: { ...typography.bodyStrong, color: colors.text, lineHeight: 20 },
-  bone: { height: 12, borderRadius: 6, backgroundColor: colors.accent },
-  skeletonStatus: { ...typography.caption, color: colors.accent, textAlign: 'center' },
+  // The edge: an editorial pull-quote with an accent rule down its spine.
+  edgeCard: {
+    borderLeftWidth: 2,
+    borderLeftColor: colors.accent,
+    backgroundColor: colors.accentDim,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+    borderTopWidth: 0,
+    gap: spacing.sm,
+  },
+  upsellCard: {
+    borderColor: colors.rule,
+    borderWidth: 1,
+    borderRadius: radius.xs,
+    padding: spacing.lg,
+    marginTop: spacing.md,
+    gap: spacing.sm,
+  },
+  upsellTitle: { ...typography.heading, color: colors.text },
+  bone: { height: 11, borderRadius: radius.xs, backgroundColor: colors.accent },
+  skeletonStatus: { ...typography.ticker, fontSize: 8.5, color: colors.accent, textAlign: 'center' },
   edgeHead: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
-  edgeLabel: { ...typography.kicker, color: colors.accent },
-  edgeBody: { ...typography.body, color: colors.text, lineHeight: 22 },
-  freshness: { fontSize: 10, color: colors.textFaint },
-  citation: { color: colors.accent, fontWeight: '700' },
+  edgeLabel: { ...typography.ticker, color: colors.accent },
+  edgeBody: { ...typography.prose, color: colors.text, fontSize: 15, lineHeight: 24 },
+  freshness: { ...typography.ticker, fontSize: 8, color: colors.textFaint },
+  citation: { ...typography.stat, fontSize: 11, color: colors.accent },
   sourceRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
-    paddingVertical: spacing.xs,
-    borderRadius: radius.sm,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.xs,
   },
   sourceRowActive: { backgroundColor: colors.accentDim },
-  sourceIndex: { ...typography.stat, color: colors.accent, fontSize: 12 },
-  sourceTitle: { ...typography.caption, color: colors.text, lineHeight: 16 },
-  sourceDate: { fontSize: 10, color: colors.textFaint, marginTop: 1 },
-  gateBody: { ...typography.body, color: colors.textMuted, lineHeight: 21, textTransform: 'capitalize' },
+  sourceIndex: { ...typography.stat, color: colors.accent, fontSize: 11 },
+  sourceTitle: { ...typography.caption, color: colors.text, lineHeight: 17 },
+  sourceDate: { ...typography.ticker, fontSize: 8, color: colors.textFaint, marginTop: 2 },
+  gateBody: { ...typography.prose, color: colors.textMuted, fontSize: 13.5 },
   teaserWrap: { gap: spacing.xs, marginBottom: spacing.xs },
-  teaserText: { ...typography.body, color: colors.text, lineHeight: 21 },
-  teaserBlur: { ...typography.body, color: colors.textFaint, lineHeight: 21, opacity: 0.45 },
+  teaserText: { ...typography.prose, color: colors.text },
+  teaserBlur: { ...typography.prose, color: colors.textFaint, opacity: 0.45 },
   explainBtn: { ...buttonPrimary, flexDirection: 'row', gap: spacing.sm },
-  explainText: { color: colors.bg, fontWeight: '700' },
+  explainText: { ...typography.button, color: colors.bg },
   listRow: { flexDirection: 'row', gap: spacing.sm, alignItems: 'flex-start' },
-  metaRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 2 },
-  metaLabel: { color: colors.textMuted, ...typography.body },
-  metaValue: { color: colors.text, ...typography.stat },
+  metaRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 3 },
+  metaLabel: { ...typography.caption, color: colors.textMuted },
+  metaValue: { ...typography.stat, color: colors.text },
   confChip: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
     borderWidth: 1,
-    borderRadius: radius.pill,
+    borderRadius: radius.xs,
     paddingHorizontal: spacing.sm,
     paddingVertical: 2,
   },
-  confDot: { width: 6, height: 6, borderRadius: 3 },
-  confText: { fontSize: 10, fontWeight: '700', letterSpacing: 0.5 },
+  confDot: { width: 5, height: 5, borderRadius: 1 },
+  confText: { ...typography.ticker, fontSize: 8.5 },
 });

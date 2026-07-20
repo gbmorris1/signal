@@ -4,7 +4,7 @@ import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useQuery } from '@tanstack/react-query';
-import { colors, radius, spacing, typography, card } from '@/theme';
+import { colors, radius, spacing, typography } from '@/theme';
 import { getCombinedSource } from '@/services/markets';
 import { PlatformBadge } from '@/components/Chip';
 import { CardSkeleton } from '@/components/Skeleton';
@@ -51,7 +51,6 @@ export default function SpreadsScreen() {
           <SpreadCard pair={item} />
         </Enter>
       )}
-      ItemSeparatorComponent={() => <View style={{ height: spacing.md }} />}
       ListEmptyComponent={
         isLoading || !isFetched ? (
           <CardSkeleton />
@@ -112,31 +111,38 @@ function VenueRow({ market, cheaper }: { market: SpreadPair['polymarket']; cheap
 }
 
 const styles = StyleSheet.create({
-  content: { padding: spacing.lg, paddingBottom: spacing.xxl, flexGrow: 1 },
-  intro: { marginBottom: spacing.md },
-  introText: { ...typography.caption, color: colors.textMuted, lineHeight: 18 },
-  card: { ...card, gap: spacing.sm },
+  content: { paddingBottom: spacing.xxl, flexGrow: 1 },
+  intro: { paddingHorizontal: spacing.lg, paddingTop: spacing.md, marginBottom: spacing.sm },
+  introText: { ...typography.prose, fontSize: 13, color: colors.textMuted },
+  card: {
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    borderBottomColor: colors.rule,
+    borderBottomWidth: 1,
+    gap: spacing.sm,
+  },
   topRow: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm },
-  title: { ...typography.heading, color: colors.text, lineHeight: 21, flex: 1 },
-  gapPill: { borderRadius: radius.pill, paddingHorizontal: spacing.sm, paddingVertical: 3 },
-  gapText: { fontSize: 12, fontWeight: '700', fontVariant: ['tabular-nums'] },
+  title: { ...typography.heading, color: colors.text, flex: 1 },
+  gapPill: { borderRadius: radius.xs, paddingHorizontal: spacing.sm, paddingVertical: 2 },
+  gapText: { ...typography.stat, fontSize: 11 },
   venueRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
     paddingVertical: spacing.sm,
     paddingHorizontal: spacing.sm,
-    borderRadius: radius.md,
-    backgroundColor: colors.surfaceElevated,
+    borderRadius: radius.xs,
+    borderWidth: 1,
+    borderColor: colors.rule,
   },
   cheapTag: {
-    backgroundColor: colors.upDim,
-    borderRadius: radius.pill,
-    paddingHorizontal: spacing.sm,
+    backgroundColor: colors.accentDim,
+    borderRadius: radius.xs,
+    paddingHorizontal: 6,
     paddingVertical: 2,
   },
-  cheapText: { fontSize: 10, fontWeight: '700', color: colors.up },
-  prob: { ...typography.stat, color: colors.text, fontSize: 16 },
+  cheapText: { ...typography.ticker, fontSize: 8, color: colors.accent },
+  prob: { ...typography.stat, fontSize: 15, color: colors.text },
   empty: { alignItems: 'center', gap: spacing.sm, marginTop: spacing.xxl, paddingHorizontal: spacing.xl },
   emptyTitle: { ...typography.heading, color: colors.textMuted },
   emptyBody: { ...typography.caption, color: colors.textFaint, textAlign: 'center', lineHeight: 18 },

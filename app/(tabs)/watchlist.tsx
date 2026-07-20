@@ -4,7 +4,7 @@ import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useQuery } from '@tanstack/react-query';
-import { colors, radius, spacing, typography, card } from '@/theme';
+import { colors, radius, spacing, typography, buttonPrimary } from '@/theme';
 import { getMarketSource } from '@/services/markets';
 import { PlatformBadge } from '@/components/Chip';
 import { OutcomeSplit } from '@/components/OutcomeSplit';
@@ -119,7 +119,6 @@ export default function WatchlistScreen() {
           )}
         </Enter>
       )}
-      ItemSeparatorComponent={() => <View style={{ height: spacing.md }} />}
       ListEmptyComponent={
         isLoading ? null : (
           <View style={styles.empty}>
@@ -174,45 +173,48 @@ function WatchRow({ market, onRemove }: { market: Market; onRemove: () => void }
 }
 
 const styles = StyleSheet.create({
-  content: { padding: spacing.lg, paddingBottom: spacing.xxl, flexGrow: 1 },
-  header: { marginBottom: spacing.lg, gap: spacing.md },
-  kicker: { ...typography.kicker, color: colors.textFaint },
+  content: { paddingBottom: spacing.xxl, flexGrow: 1 },
+  header: { paddingHorizontal: spacing.lg, paddingTop: spacing.md, marginBottom: spacing.md, gap: spacing.md },
+  kicker: { ...typography.ticker, color: colors.textFaint },
   segment: {
     flexDirection: 'row',
-    backgroundColor: colors.surface,
-    borderRadius: radius.md,
-    borderColor: colors.border,
+    borderColor: colors.rule,
     borderWidth: 1,
-    padding: 3,
+    borderRadius: radius.xs,
+    padding: 2,
   },
-  segmentTab: { flex: 1, paddingVertical: spacing.sm + 2, alignItems: 'center', borderRadius: radius.md - 3 },
-  segmentActive: { backgroundColor: colors.surfaceElevated },
-  segmentText: { color: colors.textFaint, fontWeight: '700', fontSize: 13 },
+  segmentTab: { flex: 1, paddingVertical: spacing.sm, alignItems: 'center', borderRadius: radius.xs },
+  segmentActive: { backgroundColor: colors.surfaceHigh },
+  segmentText: { ...typography.ticker, fontSize: 9, color: colors.textFaint },
   segmentTextActive: { color: colors.text },
   row: {
-    ...card,
-    gap: spacing.md,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    backgroundColor: colors.bg,
+    borderBottomColor: colors.rule,
+    borderBottomWidth: 1,
+    gap: spacing.sm,
   },
   rowHead: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
-  delta: { fontSize: 12, fontWeight: '700', fontVariant: ['tabular-nums'], flex: 1 },
+  delta: { ...typography.statSmall, fontSize: 11, flex: 1 },
   trash: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: colors.surfaceElevated,
+    width: 30,
+    height: 30,
+    borderRadius: radius.xs,
+    borderWidth: 1,
+    borderColor: colors.rule,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  title: { ...typography.heading, color: colors.text, lineHeight: 22 },
+  title: { ...typography.heading, color: colors.text },
   empty: { alignItems: 'center', gap: spacing.sm, marginTop: spacing.xxl, paddingHorizontal: spacing.xl },
   emptyTitle: { ...typography.heading, color: colors.textMuted },
   emptyBody: { ...typography.caption, color: colors.textFaint, textAlign: 'center', lineHeight: 18 },
   emptyCta: {
-    backgroundColor: colors.accent,
-    borderRadius: radius.md,
+    ...buttonPrimary,
     paddingHorizontal: spacing.xl,
-    paddingVertical: spacing.md,
     marginTop: spacing.md,
+    height: 44,
   },
-  emptyCtaText: { color: colors.bg, fontWeight: '700' },
+  emptyCtaText: { ...typography.button, color: colors.bg },
 });
