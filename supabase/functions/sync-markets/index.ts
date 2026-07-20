@@ -22,12 +22,28 @@ const CRON_SECRET = Deno.env.get('CRON_SECRET') ?? '';
 
 const MOVE_THRESHOLD = 0.05;
 const AI_SHIFT_THRESHOLD = 0.08;
-// Unusual-volume: the latest ~15-min interval added >= MULT× the prior interval's
-// volume AND >= SURGE_FRAC of the market's entire prior cumulative volume. The
-// second term is a ratio, so it stays unit-agnostic across Polymarket (USD) and
-// Kalshi (contracts). Deliberately conservative - tune against live data.
-const VOLUME_SPIKE_MULT = 4;
-const VOLUME_SURGE_FRAC = 0.15;
+// Unusual-volume: the latest ~15-min interval moved >= BASELINE_MULT× the MEDIAN of
+// this market's own recent intervals.
+//
+// Calibrated 2026-07-20 against 89k live snapshots. The previous rule (>=4× the single
+// prior interval AND >=15% of cumulative volume) was measurably broken on both terms:
+//
+//   • `prevDelta` was <= 0 in 98% of intervals, and `curDelta >= 4 * 0` is vacuously
+//     true, so the multiplier gated nothing — ~91% of fires came through that branch.
+//   • Fraction-of-cumulative doesn't survive contact with market age. Lifetime volume
+//     grows without bound, so the same 15-min burst scores ~100× lower on a six-month-old
+//     market than a day-old one. Measured: Polymarket's p98 of curDelta/cumulative is
+//     0.0039, so the 0.15 threshold could essentially never fire there (6 hits in 3 days),
+//     while on Kalshi it sat below p90 and fired constantly. One constant, both failure
+//     modes, different venues.
+//
+// A median of the market's OWN recent intervals is self-normalizing: it's scale-free
+// across venues (USD vs contracts) and across market age, which no single ratio is.
+// Measured curDelta/median on Polymarket (the source with correct cumulative data):
+// p90 = 8.1, p98 = 33.3. BASELINE_MULT sits just above p90 — deliberately nearer the
+// quiet end, since a false push is far more costly than a missed one.
+const VOLUME_BASELINE_MULT = 12;
+const VOLUME_BASELINE_MIN_SAMPLES = 4;
 
 const GAMMA =
   'https://gamma-api.polymarket.com/markets?active=true&closed=false&limit=60&order=volume&ascending=false';
@@ -67,7 +83,19 @@ interface NormMarket {
   category: string;
   probability: number;
   change24h: number;
+  /**
+   * Display + curation volume. MUST stay the same quantity the app curates on
+   * (see src/services/markets/kalshiMap.ts) or synced markets drift out of sync
+   * with what users actually see, and alerts fire for markets not in the app.
+   */
   volume: number;
+  /**
+   * Lifetime-cumulative volume, for the `market_snapshots` series only. Kept
+   * separate because it is a DIFFERENT quantity from `volume` on Kalshi (rolling
+   * 24h vs lifetime) and spike detection requires a monotonically increasing
+   * series to difference. Conflating the two is what broke the old rule.
+   */
+  volumeCumulative: number;
 }
 
 interface Detected {
@@ -94,20 +122,49 @@ function detectMove(title: string, prior: number, current: number): Detected | n
   };
 }
 
-/** Cumulative volumes: [most-recent-prior, one-before]. */
+function median(xs: number[]): number {
+  if (xs.length === 0) return 0;
+  const s = [...xs].sort((a, b) => a - b);
+  const mid = s.length >> 1;
+  return s.length % 2 ? s[mid] : (s[mid - 1] + s[mid]) / 2;
+}
+
+/**
+ * Cumulative volumes, most-recent-prior first. BOTH sources must supply a
+ * lifetime-cumulative figure (see fetchKalshi) or the deltas below are meaningless.
+ */
 function detectVolumeSpike(
   title: string,
   current: number,
   prob: number,
   priorVols: number[],
 ): Detected | null {
-  if (priorVols.length < 2) return null;
-  const [prev0, prev1] = priorVols;
-  const prevDelta = prev0 - prev1;
+  const [prev0] = priorVols;
   const curDelta = current - prev0;
-  if (prev0 <= 0 || prevDelta <= 0) return null;
-  if (curDelta < VOLUME_SPIKE_MULT * prevDelta) return null;
-  if (curDelta < prev0 * VOLUME_SURGE_FRAC) return null;
+  if (!(prev0 > 0) || curDelta <= 0) return null;
+
+  // Per-interval deltas across the prior window, oldest→newest.
+  const deltas: number[] = [];
+  for (let i = priorVols.length - 1; i > 0; i--) {
+    const d = priorVols[i - 1] - priorVols[i];
+    if (Number.isFinite(d)) deltas.push(d);
+  }
+  // Too little history to know what "normal" is for this market. Staying silent
+  // beats guessing: a market that just entered the top-N by volume has no baseline.
+  if (deltas.length < VOLUME_BASELINE_MIN_SAMPLES) return null;
+
+  const base = median(deltas.filter((d) => d > 0));
+  if (!(base > 0)) return null;
+  if (curDelta < VOLUME_BASELINE_MULT * base) return null;
+
+  // Sanity bound: a single 15-min interval cannot legitimately exceed the market's
+  // entire prior lifetime volume. This rejects two real classes of false positive —
+  // brand-new markets whose tiny denominator produced ratios in the thousands, and
+  // any venue-side accounting change that restates the volume series (e.g. the
+  // Kalshi rolling→cumulative field switch, which manufactures exactly one enormous
+  // delta and would otherwise alert every Kalshi market at once).
+  if (curDelta > prev0) return null;
+
   return {
     kind: 'volume_spike',
     title: `Unusual volume on ${title}`,
@@ -172,13 +229,14 @@ async function dispatchAlert(
 
 /** Upsert one market, record a snapshot, and fire the single most important alert. */
 async function processMarket(supabase: SupabaseClient, m: NormMarket): Promise<number> {
-  // Two most recent prior snapshots: [0] for move detection, [0]&[1] for volume.
+  // Prior snapshots, newest first: [0] for move detection, the whole window for the
+  // volume baseline (which needs enough intervals to take a meaningful median).
   const { data: prev } = await supabase
     .from('market_snapshots')
     .select('probability, volume')
     .eq('market_id', m.id)
     .order('captured_at', { ascending: false })
-    .limit(2);
+    .limit(12);
 
   await supabase.from('markets').upsert(
     {
@@ -197,7 +255,9 @@ async function processMarket(supabase: SupabaseClient, m: NormMarket): Promise<n
   await supabase.from('market_snapshots').insert({
     market_id: m.id,
     probability: m.probability,
-    volume: m.volume,
+    // Cumulative, NOT the display volume — this column is a time series that only
+    // detectVolumeSpike reads, and differencing it requires a monotonic quantity.
+    volume: m.volumeCumulative,
   });
 
   const priors = (prev ?? []) as Array<{ probability: number; volume: number }>;
@@ -206,7 +266,7 @@ async function processMarket(supabase: SupabaseClient, m: NormMarket): Promise<n
   const moveHit = detectMove(m.title, num(priors[0].probability), m.probability);
   const volHit = detectVolumeSpike(
     m.title,
-    m.volume,
+    m.volumeCumulative,
     m.probability,
     priors.map((p) => num(p.volume)),
   );
@@ -240,7 +300,10 @@ async function fetchPolymarket(): Promise<NormMarket[]> {
       category: mapCategory(m.category as string | undefined, question),
       probability: Math.min(0.999, Math.max(0.001, prices[0])),
       change24h: num(m.oneDayPriceChange),
+      // Polymarket's Gamma `volume` is already lifetime-cumulative, so display and
+      // series are the same figure here. Kalshi is where the two diverge.
       volume: num(m.volumeNum ?? m.volume),
+      volumeCumulative: num(m.volumeNum ?? m.volume),
     });
   }
   return out;
@@ -274,7 +337,18 @@ async function fetchKalshi(): Promise<NormMarket[]> {
       const probability = mid != null && spread <= 0.15 ? mid : last && last > 0 ? last : mid;
       if (probability == null || probability <= 0) continue;
       const prev = dollars(raw.previous_price_dollars);
+      // Two DIFFERENT quantities, deliberately kept apart:
+      //   volume_24h_fp — rolling 24h window. The right "what's hot now" figure, and
+      //     what the app curates/sorts on, so it stays the display + curation volume.
+      //   volume_fp     — lifetime cumulative. The only one valid for the snapshot
+      //     series, because spike detection differences consecutive values.
+      // The old code fed the rolling figure to both, which silently broke detection:
+      // a rolling window goes DOWN as old trades age out, so interval deltas are
+      // routinely negative — 552 negative deltas on Kalshi vs 0 on Polymarket is what
+      // exposed it. Verified live on one market: volume_fp = 112950.78 vs
+      // volume_24h_fp = 367.63.
       const volume = num(raw.volume_24h_fp) || num(raw.volume_fp);
+      const volumeCumulative = num(raw.volume_fp) || volume;
       if (volume < KALSHI_MIN_VOLUME) continue;
       const clamped = Math.min(0.999, Math.max(0.001, probability));
       const sub = String(raw.yes_sub_title ?? '').trim();
@@ -288,6 +362,7 @@ async function fetchKalshi(): Promise<NormMarket[]> {
         probability: clamped,
         change24h: prev != null && prev > 0 ? clamped - prev : 0,
         volume,
+        volumeCumulative,
       });
     }
     if (legs.length <= 1) {
