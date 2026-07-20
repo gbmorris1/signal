@@ -135,7 +135,8 @@ create table if not exists ai_predictions (
   resolved            boolean not null default false,
   outcome             numeric,            -- 1 = YES occurred, 0 = NO
   resolved_at         timestamptz,
-  ai_correct          boolean,            -- was ODDIQ closer to truth than the market?
+  ai_correct          boolean,            -- strict win only; a tie is NOT a win
+  verdict             text check (verdict in ('beat', 'lost', 'tie')),
   ai_brier            numeric,            -- (ai_probability - outcome)^2  (lower = better)
   market_brier        numeric             -- (market_probability - outcome)^2
 );
@@ -144,13 +145,28 @@ create index if not exists predictions_market_idx on ai_predictions(market_id);
 
 -- Rolling accuracy: how often ODDIQ's estimate beat the market's, and the
 -- Brier-score edge (positive = ODDIQ more accurate). Public read (it's the pitch).
+-- Ties are pushes (excluded from the percentage), and the sample is deduped to
+-- one call per market so correlated re-analyses can't inflate it. See
+-- supabase/migrations/2026-07-20-track-record-integrity.sql.
 create or replace view track_record as
+with deduped as (
+  select distinct on (market_id)
+    market_id, ai_brier, market_brier, verdict
+  from ai_predictions
+  where resolved = true and verdict is not null
+  order by market_id, created_at asc
+)
 select
-  count(*)                                             as resolved_predictions,
-  round(avg(case when ai_correct then 1 else 0 end) * 100, 1) as beat_market_pct,
-  round(avg(market_brier - ai_brier)::numeric, 4)      as brier_edge
-from ai_predictions
-where resolved = true;
+  count(*)                                                as resolved_predictions,
+  round(
+    (count(*) filter (where verdict = 'beat')::numeric
+      / nullif(count(*) filter (where verdict in ('beat', 'lost')), 0)) * 100
+  , 1)                                                    as beat_market_pct,
+  round(avg(market_brier - ai_brier)::numeric, 4)         as brier_edge,
+  count(*) filter (where verdict = 'beat')                as beat_count,
+  count(*) filter (where verdict = 'lost')                as lost_count,
+  count(*) filter (where verdict = 'tie')                 as tie_count
+from deduped;
 
 -- ── ai_usage (server-side daily quota — the real enforcement) ───────────────
 create table if not exists ai_usage (

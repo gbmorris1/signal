@@ -20,7 +20,11 @@ const CRON_SECRET = Deno.env.get('CRON_SECRET') ?? '';
 const GAMMA = 'https://gamma-api.polymarket.com';
 const KALSHI = 'https://api.elections.kalshi.com/trade-api/v2';
 
-// Returns 1 (YES occurred), 0 (NO), or null (not resolved yet).
+// Scoring rules mirror src/lib/scoring.ts, which is the tested source of
+// truth (Deno functions can't import app code). Change both together.
+const STALE_PREDICTION_DAYS = 180;
+
+// Returns 1 (YES occurred), 0 (NO), or null (not settled yet).
 async function polymarketOutcome(externalId: string): Promise<number | null> {
   try {
     const res = await fetch(`${GAMMA}/markets?slug=${encodeURIComponent(externalId)}`);
@@ -29,9 +33,14 @@ async function polymarketOutcome(externalId: string): Promise<number | null> {
     const m = Array.isArray(arr) ? arr[0] : null;
     if (!m || !m.closed) return null;
     const prices = JSON.parse(m.outcomePrices ?? '[]').map(Number);
-    if (prices.length < 1) return null;
-    // On resolution Polymarket sets the YES price to 1 or 0.
-    return prices[0] >= 0.5 ? 1 : 0;
+    const yes = prices[0];
+    if (!Number.isFinite(yes)) return null;
+    // `closed` is NOT enough: a market can be closed while resolution is still
+    // pending, with the YES price sitting mid-range. Only score a decisively
+    // settled price, otherwise we write a wrong outcome into a permanent record.
+    if (yes >= 0.95) return 1;
+    if (yes <= 0.05) return 0;
+    return null;
   } catch {
     return null;
   }
@@ -58,11 +67,15 @@ Deno.serve(async (req: Request) => {
   }
   const supabase = createClient(SUPABASE_URL, SERVICE_ROLE);
 
-  // Batch: distinct unresolved markets, oldest first.
+  // Batch: distinct unresolved markets, oldest first — but only within the
+  // stale window. Markets that never settle (delisted, voided) would otherwise
+  // permanently occupy the batch and newer predictions would never be scored.
+  const staleCutoff = new Date(Date.now() - STALE_PREDICTION_DAYS * 86_400_000).toISOString();
   const { data: rows } = await supabase
     .from('ai_predictions')
     .select('id, market_id, ai_probability, market_probability')
     .eq('resolved', false)
+    .gte('created_at', staleCutoff)
     .order('created_at', { ascending: true })
     .limit(300);
   if (!rows || rows.length === 0) {
@@ -88,6 +101,10 @@ Deno.serve(async (req: Request) => {
     for (const p of preds) {
       const aiBrier = (p.ai_probability - outcome) ** 2;
       const mktBrier = (p.market_probability - outcome) ** 2;
+      // A tie is a PUSH, not a loss: when the model simply agrees with the
+      // market there's no forecasting skill to credit either way. Scoring ties
+      // as losses systematically understated the headline metric.
+      const tie = Math.abs(aiBrier - mktBrier) < 1e-9;
       await supabase
         .from('ai_predictions')
         .update({
@@ -96,7 +113,8 @@ Deno.serve(async (req: Request) => {
           resolved_at: new Date().toISOString(),
           ai_brier: aiBrier,
           market_brier: mktBrier,
-          ai_correct: aiBrier < mktBrier, // ODDIQ closer to the truth than the market
+          ai_correct: !tie && aiBrier < mktBrier,
+          verdict: tie ? 'tie' : aiBrier < mktBrier ? 'beat' : 'lost',
         })
         .eq('id', p.id);
       resolved++;
