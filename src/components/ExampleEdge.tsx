@@ -20,7 +20,7 @@ export function ExampleEdge() {
   }, []);
 
   return (
-    <View style={[styles.card, shadows.glowAccent]}>
+    <View style={[styles.card, shadows.accentEdge]}>
       <View style={styles.head}>
         <Ionicons name="flash" size={13} color={colors.accent} />
         <Text style={styles.kicker}>SAMPLE ODDIQ EDGE</Text>
@@ -67,7 +67,7 @@ const styles = StyleSheet.create({
   title: { ...typography.heading, color: colors.text },
   compareRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   compareCell: { alignItems: 'center' },
-  compareVal: { ...typography.monoLarge, color: colors.text, fontSize: 18 },
+  compareVal: { ...typography.statLarge, color: colors.text, fontSize: 18 },
   compareLbl: { fontSize: 10, color: colors.textFaint },
   gapPill: {
     marginLeft: 'auto',

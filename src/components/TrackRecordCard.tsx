@@ -27,17 +27,11 @@ export function TrackRecordCard() {
   const proven = record && record.resolvedPredictions >= TRACK_RECORD_PROVEN_MIN;
 
   return (
-    <View style={[styles.card, proven ? shadows.glowUp : null]}>
+    <View style={styles.card}>
       <View style={styles.head}>
-        <Ionicons name="ribbon-outline" size={13} color={proven ? colors.up : colors.accent} />
-        <Text style={[styles.kicker, { color: proven ? colors.up : colors.accent }]}>
-          TRACK RECORD
-        </Text>
+        <Text style={styles.kicker}>The verified record</Text>
         <View style={{ flex: 1 }} />
-        <View style={styles.verifiedPill}>
-          <Ionicons name="shield-checkmark" size={10} color={colors.textMuted} />
-          <Text style={styles.verifiedText}>VERIFIED</Text>
-        </View>
+        <Ionicons name="shield-checkmark-outline" size={11} color={colors.textFaint} />
       </View>
 
       {proven ? (
@@ -71,30 +65,21 @@ export function TrackRecordCard() {
 }
 
 const styles = StyleSheet.create({
+  // No card chrome: rules above and below, like a masthead panel.
   card: {
-    backgroundColor: colors.surface,
-    borderColor: colors.border,
-    borderWidth: 1,
-    borderRadius: radius.lg,
-    padding: spacing.lg,
-    gap: spacing.xs,
+    borderTopColor: colors.rule,
+    borderTopWidth: 1,
+    borderBottomColor: colors.rule,
+    borderBottomWidth: 1,
+    paddingVertical: spacing.lg,
+    gap: spacing.sm,
   },
   head: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  kicker: { ...typography.kicker, fontSize: 10 },
-  verifiedPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 3,
-    backgroundColor: colors.surfaceElevated,
-    borderRadius: radius.pill,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 2,
-  },
-  verifiedText: { fontSize: 9, fontWeight: '800', letterSpacing: 0.6, color: colors.textMuted },
-  statRow: { flexDirection: 'row', alignItems: 'baseline', gap: spacing.sm, marginTop: 2 },
-  bigStat: { ...typography.monoDisplay, color: colors.up, fontSize: 36 },
-  bigStatUnit: { ...typography.body, color: colors.textMuted, fontWeight: '700' },
-  title: { ...typography.title, color: colors.text, fontSize: 19, marginTop: 2 },
-  sub: { ...typography.caption, color: colors.textMuted, lineHeight: 18 },
-  building: { fontSize: 12, color: colors.accent, fontWeight: '700', marginTop: 2 },
+  kicker: { ...typography.ticker, color: colors.accent },
+  statRow: { flexDirection: 'row', alignItems: 'baseline', gap: spacing.md },
+  bigStat: { ...typography.statHero, color: colors.text },
+  bigStatUnit: { ...typography.caption, color: colors.textMuted, flex: 1 },
+  title: { ...typography.title, color: colors.text },
+  sub: { ...typography.prose, color: colors.textMuted, fontSize: 13.5, lineHeight: 21 },
+  building: { ...typography.statSmall, color: colors.accent, marginTop: 2 },
 });

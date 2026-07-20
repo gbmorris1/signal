@@ -12,6 +12,9 @@
     "build:check": "expo export --platform ios --output-dir dist"
   },
   "dependencies": {
+    "@expo-google-fonts/jetbrains-mono": "^0.4.1",
+    "@expo-google-fonts/libre-bodoni": "^0.4.2",
+    "@expo-google-fonts/public-sans": "^0.4.2",
     "@expo/vector-icons": "^15.0.3",
     "@react-native-async-storage/async-storage": "2.2.0",
     "@supabase/supabase-js": "^2.45.0",
@@ -20,6 +23,7 @@
     "expo": "^54.0.0",
     "expo-constants": "~18.0.13",
     "expo-device": "~8.0.10",
+    "expo-font": "~14.0.12",
     "expo-haptics": "~15.0.8",
     "expo-linking": "~8.0.12",
     "expo-localization": "~17.0.9",

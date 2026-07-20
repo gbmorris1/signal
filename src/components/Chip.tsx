@@ -1,12 +1,12 @@
 import { Text, View, StyleSheet } from 'react-native';
-import { colors, radius, spacing } from '@/theme';
+import { colors, radius, typography } from '@/theme';
 import type { AISignal, Platform } from '@/types';
 
 const SIGNAL_COLOR: Record<AISignal, string> = {
-  opportunity: colors.signalOpportunity,
-  watch: colors.signalWatch,
-  neutral: colors.signalNeutral,
-  caution: colors.signalCaution,
+  opportunity: colors.accent,
+  watch: colors.textMuted,
+  neutral: colors.textFaint,
+  caution: colors.warn,
 };
 
 const SIGNAL_LABEL: Record<AISignal, string> = {
@@ -16,26 +16,27 @@ const SIGNAL_LABEL: Record<AISignal, string> = {
   caution: 'Caution',
 };
 
+/** Signal state as a squared terminal tag rather than a rounded pill. */
 export function SignalChip({ signal }: { signal: AISignal }) {
   const c = SIGNAL_COLOR[signal];
   return (
-    <View style={[styles.chip, { borderColor: c }]}>
-      <View style={[styles.dot, { backgroundColor: c }]} />
-      <Text style={[styles.label, { color: c }]}>{SIGNAL_LABEL[signal]}</Text>
+    <View style={[styles.tag, { borderColor: c }]}>
+      <Text style={[styles.tagText, { color: c }]}>{SIGNAL_LABEL[signal]}</Text>
     </View>
   );
 }
 
-const PLATFORM_STYLE: Record<Platform, { color: string; bg: string; label: string }> = {
-  polymarket: { color: colors.polymarket, bg: colors.polymarketDim, label: 'POLYMARKET' },
-  kalshi: { color: colors.kalshi, bg: colors.kalshiDim, label: 'KALSHI' },
+const PLATFORM_STYLE: Record<Platform, { color: string; label: string }> = {
+  polymarket: { color: colors.polymarket, label: 'Polymarket' },
+  kalshi: { color: colors.kalshi, label: 'Kalshi' },
 };
 
-/** Brand-colored platform badge - platform identity should be unmissable. */
+/** Venue identity: a colour-keyed rule + name. Ownership must be unmissable. */
 export function PlatformBadge({ platform, size = 'sm' }: { platform: Platform; size?: 'sm' | 'md' }) {
   const s = PLATFORM_STYLE[platform];
   return (
-    <View style={[styles.platform, { backgroundColor: s.bg }, size === 'md' && styles.platformMd]}>
+    <View style={styles.platform}>
+      <View style={[styles.venueRule, { backgroundColor: s.color }]} />
       <Text
         style={[styles.platformText, { color: s.color }, size === 'md' && styles.platformTextMd]}
       >
@@ -46,25 +47,16 @@ export function PlatformBadge({ platform, size = 'sm' }: { platform: Platform; s
 }
 
 const styles = StyleSheet.create({
-  platform: {
-    borderRadius: 4,
+  platform: { flexDirection: 'row', alignItems: 'center', gap: 5, alignSelf: 'flex-start' },
+  venueRule: { width: 2, height: 10, borderRadius: radius.xs },
+  platformText: { ...typography.ticker, fontSize: 9 },
+  platformTextMd: { fontSize: 10.5 },
+  tag: {
+    borderWidth: 1,
+    borderRadius: radius.xs,
     paddingHorizontal: 6,
     paddingVertical: 2,
     alignSelf: 'flex-start',
   },
-  platformMd: { paddingHorizontal: 8, paddingVertical: 3 },
-  platformText: { fontSize: 9, fontWeight: '800', letterSpacing: 0.8 },
-  platformTextMd: { fontSize: 11 },
-  chip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderRadius: radius.pill,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 3,
-    gap: 6,
-    alignSelf: 'flex-start',
-  },
-  dot: { width: 6, height: 6, borderRadius: 3 },
-  label: { fontSize: 12, fontWeight: '600' },
+  tagText: { ...typography.ticker, fontSize: 8.5 },
 });

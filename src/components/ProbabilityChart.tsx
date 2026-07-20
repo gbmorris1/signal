@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Animated, Easing, PanResponder, Text, View, StyleSheet } from 'react-native';
 import Svg, { Path, Circle, Line, Defs, LinearGradient, Stop } from 'react-native-svg';
 import * as Haptics from 'expo-haptics';
-import { colors, radius, spacing } from '@/theme';
+import { colors, radius, spacing, typography } from '@/theme';
 import type { MarketSnapshot } from '@/types';
 
 const AnimatedPath = Animated.createAnimatedComponent(Path);
@@ -132,7 +132,9 @@ export function ProbabilityChart({
   if (!geom) return <View style={{ width, height }} />;
 
   const { pts, min, max } = geom;
-  const stroke = up ? colors.up : colors.down;
+  // One instrument colour for the series; direction is carried by the delta
+  // readouts, not by recolouring the line every render.
+  const stroke = colors.accent;
   const line = smoothPath(pts);
   const area = `${line} L ${pts[pts.length - 1][0].toFixed(1)} ${height - PAD_BOTTOM} L ${PAD_X} ${height - PAD_BOTTOM} Z`;
   const [endX, endY] = pts[pts.length - 1];
@@ -153,6 +155,21 @@ export function ProbabilityChart({
             <Stop offset="1" stopColor={stroke} stopOpacity={0} />
           </LinearGradient>
         </Defs>
+        {/* Instrument gridlines: quarter divisions of the visible range. */}
+        {[0.25, 0.5, 0.75].map((f) => {
+          const y = PAD_TOP + f * (height - PAD_TOP - PAD_BOTTOM);
+          return (
+            <Line
+              key={f}
+              x1={PAD_X}
+              y1={y}
+              x2={width - PAD_X}
+              y2={y}
+              stroke={colors.rule}
+              strokeWidth={1}
+            />
+          );
+        })}
         <AnimatedPath d={area} fill="url(#chartFill)" opacity={fillOpacity} />
         <AnimatedPath
           d={line}
@@ -209,25 +226,19 @@ export function ProbabilityChart({
 }
 
 const styles = StyleSheet.create({
-  rangeLabel: {
-    position: 'absolute',
-    fontSize: 10,
-    fontWeight: '600',
-    color: colors.textFaint,
-    fontVariant: ['tabular-nums'],
-  },
-  axisLabel: { position: 'absolute', fontSize: 10, color: colors.textFaint },
+  rangeLabel: { position: 'absolute', ...typography.statSmall, fontSize: 9.5, color: colors.textFaint },
+  axisLabel: { position: 'absolute', ...typography.ticker, fontSize: 8.5, color: colors.textGhost },
   tooltip: {
     position: 'absolute',
     top: 0,
     backgroundColor: colors.surfaceElevated,
-    borderColor: colors.borderStrong,
+    borderColor: colors.ruleStrong,
     borderWidth: 1,
-    borderRadius: radius.sm,
+    borderRadius: radius.xs,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.xs,
     alignItems: 'center',
   },
-  tooltipProb: { fontSize: 20, fontWeight: '700', fontVariant: ['tabular-nums'] },
-  tooltipDate: { fontSize: 11, color: colors.textMuted, marginTop: 1 },
+  tooltipProb: { ...typography.statLarge },
+  tooltipDate: { ...typography.ticker, fontSize: 8.5, color: colors.textFaint, marginTop: 2 },
 });

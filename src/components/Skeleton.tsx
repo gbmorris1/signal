@@ -1,11 +1,10 @@
 import { useEffect, useRef } from 'react';
 import { Animated, Easing, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
-import { colors, radius } from '@/theme';
+import { colors, radius, spacing } from '@/theme';
 
 /**
- * Shimmer skeleton bone. A static gray block reads as "broken" for the first
- * beat before the eye recognizes the pattern; the sweeping highlight is what
- * signals "loading" rather than "didn't render."
+ * Shimmer bone. A static block reads as "broken" for the first beat before the
+ * eye recognises the pattern; the pulse is what says "loading".
  */
 export function Bone({ style }: { style?: StyleProp<ViewStyle> }) {
   const sweep = useRef(new Animated.Value(0)).current;
@@ -23,23 +22,20 @@ export function Bone({ style }: { style?: StyleProp<ViewStyle> }) {
     return () => loop.stop();
   }, [sweep]);
 
-  const opacity = sweep.interpolate({
-    inputRange: [0, 0.5, 1],
-    outputRange: [0.5, 1, 0.5],
-  });
-
+  const opacity = sweep.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0.45, 1, 0.45] });
   return <Animated.View style={[styles.bone, style, { opacity }]} />;
 }
 
-/** Three-line card skeleton matching the market-card layout, used on Home/Discover. */
-export function CardSkeleton({ count = 3 }: { count?: number }) {
+/** Placeholder rows matching the ruled market-row layout. */
+export function CardSkeleton({ count = 4 }: { count?: number }) {
   return (
-    <View style={{ gap: 12 }}>
+    <View>
       {Array.from({ length: count }).map((_, i) => (
-        <View key={i} style={styles.card}>
-          <Bone style={{ width: '30%' }} />
-          <Bone style={{ width: '85%', height: 16 }} />
-          <Bone style={{ width: '40%', height: 24, marginTop: 8 }} />
+        <View key={i} style={styles.row}>
+          <Bone style={{ width: '34%', height: 8 }} />
+          <Bone style={{ width: '88%', height: 15 }} />
+          <Bone style={{ width: '100%', height: 3 }} />
+          <Bone style={{ width: '42%', height: 12 }} />
         </View>
       ))}
     </View>
@@ -47,13 +43,12 @@ export function CardSkeleton({ count = 3 }: { count?: number }) {
 }
 
 const styles = StyleSheet.create({
-  bone: { height: 10, borderRadius: 5, backgroundColor: colors.surfaceElevated },
-  card: {
-    backgroundColor: colors.surface,
-    borderColor: colors.border,
-    borderWidth: 1,
-    borderRadius: radius.lg,
-    padding: 20,
-    gap: 8,
+  bone: { height: 10, borderRadius: radius.xs, backgroundColor: colors.surfaceHigh },
+  row: {
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    borderBottomColor: colors.rule,
+    borderBottomWidth: 1,
+    gap: spacing.sm,
   },
 });

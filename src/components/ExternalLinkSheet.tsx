@@ -88,7 +88,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    ...shadows.card,
+    ...shadows.raised,
   },
   glyphInner: { width: 30, height: 30, borderRadius: 9, alignItems: 'center', justifyContent: 'center' },
   title: { ...typography.title, color: colors.text, fontSize: 19, textAlign: 'center' },

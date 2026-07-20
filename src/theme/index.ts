@@ -1,61 +1,113 @@
-// ODDIQ design tokens - dark finance-terminal system.
-// Built on the mobile-app-ui-design rules: one font family, 4 type sizes,
-// 2 weights, opacity-driven text hierarchy, 60/30/10 color, 8-pt grid,
-// soft tinted shadows. No raw hex outside this file.
+// ODDIQ design system — "Research Terminal".
+//
+// The direction: a research publication wearing a terminal's structure. Warm
+// ink ground, ochre accent, hairline rules instead of floating cards, and a
+// THREE-ROLE type system that deliberately breaks the usual "one family" rule:
+//
+//   serif (Libre Bodoni)   → reading: market questions, the AI thesis
+//   mono  (JetBrains Mono) → data:    every number, label, timestamp, rank
+//   sans  (Public Sans)    → chrome:  controls, captions, secondary UI
+//
+// That split is how editorial-data products (FT, Bloomberg, The Economist's
+// data desk) read authoritative rather than generic.
+//
+// Tokens are layered: PRIMITIVE (raw values) → SEMANTIC (meaning) → COMPONENT
+// (recipes). Screens should consume SEMANTIC/COMPONENT tokens, never primitives.
 import type { TextStyle, ViewStyle } from 'react-native';
 
-export const colors = {
-  // 60% - neutral base (navy-cast near-black, tuned to the ODDIQ mark)
-  bg: '#080B14',
-  surface: '#111726',
-  surfaceElevated: '#182034',
-  // Deep navy from the wordmark; brand surfaces + icon field.
-  brandNavy: '#0E1E45',
-  // hairlines from white opacity so they sit naturally on any surface
-  border: 'rgba(244,246,250,0.08)',
-  borderStrong: 'rgba(244,246,250,0.15)',
-  // 30% - text, hierarchy by opacity (100 / 64 / 40)
-  text: '#F5F6F8',
-  textMuted: 'rgba(245,246,248,0.64)',
-  textFaint: 'rgba(245,246,248,0.40)',
-  // 10% - accent: ODDIQ cyan (the ascending arrow) + supporting brand blue
-  accent: '#22C9F5',
-  accentDim: 'rgba(34,201,245,0.14)',
-  // Mid-blue facet from the mark; secondary brand tone.
-  brandBlue: '#1E6FD9',
-  up: '#2FD48C',
-  upDim: 'rgba(47,212,140,0.14)',
-  down: '#FF5A6B',
-  downDim: 'rgba(255,90,107,0.14)',
-  warn: '#FFB020',
-  warnDim: 'rgba(255,176,32,0.14)',
-  // signal chips
-  signalOpportunity: '#2FD48C',
-  signalWatch: '#22C9F5',
-  signalNeutral: 'rgba(245,246,248,0.64)',
-  signalCaution: '#FFB020',
-  // platform identities - deliberate exception to the accent budget: platform
-  // ownership must be unmissable (user-tested requirement)
-  polymarket: '#8B7CFF',
-  polymarketDim: 'rgba(139,124,255,0.14)',
-  kalshi: '#00C2A8',
-  kalshiDim: 'rgba(0,194,168,0.14)',
+// ─────────────────────────────────────────────────────────────────────────────
+// LAYER 1 — PRIMITIVES. Raw values. Never referenced directly by screens.
+// ─────────────────────────────────────────────────────────────────────────────
+const palette = {
+  // Warm ink ground. The warmth is what separates this from cold fintech dark.
+  ink900: '#0B0A0D',
+  ink800: '#0E0D10',
+  ink700: '#141216',
+  ink600: '#1A171C',
+  ink500: '#221E24',
+
+  paper: '#F3EFE8', // warm off-white, the "printed" text colour
+  ochre: '#C9A227', // the accent: brass/ochre, not cyan
+  ochreBright: '#E3BC42',
+
+  sage: '#6FBF8B', // up / positive — muted, editorial, not neon
+  rust: '#D9614C', // down / negative
+  amber: '#D9A441', // caution
+
+  violet: '#8B7CFF', // Polymarket brand
+  teal: '#00C2A8', // Kalshi brand
 } as const;
 
-/**
- * Per-category hues. Used ONLY as small dots/tints, never as text color -
- * strong color is reserved for money movement and CTAs.
- */
-export const categoryColors: Record<string, string> = {
-  politics: '#FF7A59',
-  finance: '#3B9BFF',
-  crypto: '#F7B32B',
-  sports: '#2FD48C',
-  world: '#9B8CFF',
-  technology: '#00C2D1',
+const alpha = (hex: string, a: number) => {
+  const n = parseInt(hex.slice(1), 16);
+  return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${a})`;
 };
 
-// 8-pt grid (4 allowed as half-step)
+// ─────────────────────────────────────────────────────────────────────────────
+// LAYER 2 — SEMANTIC. What things MEAN. This is what screens consume.
+// ─────────────────────────────────────────────────────────────────────────────
+export const colors = {
+  // grounds
+  bg: palette.ink800,
+  bgDeep: palette.ink900,
+  surface: palette.ink700,
+  surfaceElevated: palette.ink600,
+  surfaceHigh: palette.ink500,
+
+  // text, by role (opacity carries hierarchy)
+  text: palette.paper,
+  textMuted: alpha(palette.paper, 0.66),
+  textFaint: alpha(palette.paper, 0.42),
+  textGhost: alpha(palette.paper, 0.26),
+
+  // hairline rules do the structural work that shadows used to
+  rule: alpha(palette.paper, 0.13),
+  ruleStrong: alpha(palette.paper, 0.22),
+  border: alpha(palette.paper, 0.13),
+  borderStrong: alpha(palette.paper, 0.22),
+
+  // accent
+  accent: palette.ochre,
+  accentBright: palette.ochreBright,
+  accentDim: alpha(palette.ochre, 0.12),
+  accentEdge: alpha(palette.ochre, 0.34),
+
+  // market direction
+  up: palette.sage,
+  upDim: alpha(palette.sage, 0.13),
+  down: palette.rust,
+  downDim: alpha(palette.rust, 0.13),
+  warn: palette.amber,
+  warnDim: alpha(palette.amber, 0.13),
+
+  // signal chips
+  signalOpportunity: palette.ochre,
+  signalWatch: palette.paper,
+  signalNeutral: alpha(palette.paper, 0.5),
+  signalCaution: palette.amber,
+
+  // platform identity (kept vivid — venue ownership must be unmissable)
+  polymarket: palette.violet,
+  polymarketDim: alpha(palette.violet, 0.14),
+  kalshi: palette.teal,
+  kalshiDim: alpha(palette.teal, 0.14),
+
+  // brand mark
+  brandNavy: '#1E2A5C',
+  brandBlue: '#1E6FD9',
+} as const;
+
+/** Per-category hues — small dots/tints only, never text. */
+export const categoryColors: Record<string, string> = {
+  politics: '#D9614C',
+  finance: '#C9A227',
+  crypto: '#E0A03C',
+  sports: '#6FBF8B',
+  world: '#9B8CFF',
+  technology: '#4FB3C4',
+};
+
+// 8-pt grid (4 as half-step)
 export const spacing = {
   xs: 4,
   sm: 8,
@@ -66,103 +118,151 @@ export const spacing = {
   xxxl: 48,
 } as const;
 
+/** Terminal geometry: near-square. Roundness reads consumer; this reads instrument. */
 export const radius = {
-  sm: 8,
-  md: 12,
-  lg: 20,
+  xs: 2,
+  sm: 4,
+  md: 6,
+  lg: 8,
   pill: 999,
 } as const;
 
-// ── Typography: ONE family (system), 4 sizes (34/20/15/12), 2 weights (700/400).
-// Hierarchy comes from size + weight + text opacity, not extra variants.
-const W_BOLD = '700' as const;
-const W_REG = '400' as const;
-const TABULAR: TextStyle = { fontVariant: ['tabular-nums'] };
-
-export const typography = {
-  display: { fontSize: 34, fontWeight: W_BOLD, letterSpacing: -0.8 },
-  title: { fontSize: 20, fontWeight: W_BOLD, letterSpacing: -0.4 },
-  heading: { fontSize: 15, fontWeight: W_BOLD, letterSpacing: -0.2 },
-  body: { fontSize: 15, fontWeight: W_REG },
-  bodyStrong: { fontSize: 15, fontWeight: W_BOLD },
-  caption: { fontSize: 12, fontWeight: W_REG },
-  /** Small-caps label. Same 12px step, bold + tracking does the work. */
-  kicker: {
-    fontSize: 12,
-    fontWeight: W_BOLD,
-    letterSpacing: 1.1,
-    textTransform: 'uppercase' as const,
-  },
-  /** Numbers: same scale, tabular digits. */
-  mono: { fontSize: 15, fontWeight: W_BOLD, ...TABULAR },
-  monoLarge: { fontSize: 20, fontWeight: W_BOLD, letterSpacing: -0.4, ...TABULAR },
-  monoDisplay: { fontSize: 34, fontWeight: W_BOLD, letterSpacing: -0.8, ...TABULAR },
+// ── Type ────────────────────────────────────────────────────────────────────
+export const fonts = {
+  serifRegular: 'LibreBodoni_400Regular',
+  serif: 'LibreBodoni_600SemiBold',
+  monoRegular: 'JetBrainsMono_400Regular',
+  mono: 'JetBrainsMono_700Bold',
+  sansRegular: 'PublicSans_400Regular',
+  sans: 'PublicSans_600SemiBold',
+  sansBold: 'PublicSans_700Bold',
 } as const;
 
-// ── Soft shadows, tinted to the near-black bg (never harsh gray).
-export const shadows: Record<'card' | 'raised' | 'glowAccent' | 'glowUp' | 'glowDown', ViewStyle> = {
-  card: {
-    shadowColor: '#05060A',
-    shadowOpacity: 0.5,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 4,
+const TABULAR: TextStyle = { fontVariant: ['tabular-nums'] };
+
+/**
+ * Type roles. Pick by JOB, not by size:
+ *   display / title / heading / prose → serif (things you read)
+ *   stat / statHero / ticker          → mono  (things you compare)
+ *   body / caption / button / kicker  → sans  (things you operate)
+ */
+export const typography = {
+  // ── serif: reading
+  display: { fontFamily: fonts.serif, fontSize: 30, letterSpacing: -0.4, lineHeight: 34 },
+  title: { fontFamily: fonts.serif, fontSize: 21, letterSpacing: -0.2, lineHeight: 26 },
+  heading: { fontFamily: fonts.serif, fontSize: 16, letterSpacing: -0.1, lineHeight: 21 },
+  /** Long-form analysis copy — the thesis. Serif at reading size. */
+  prose: { fontFamily: fonts.serifRegular, fontSize: 14.5, lineHeight: 23 },
+
+  // ── mono: data
+  statHero: { fontFamily: fonts.mono, fontSize: 34, letterSpacing: -1.4, ...TABULAR },
+  statLarge: { fontFamily: fonts.mono, fontSize: 22, letterSpacing: -0.6, ...TABULAR },
+  stat: { fontFamily: fonts.mono, fontSize: 14, ...TABULAR },
+  statSmall: { fontFamily: fonts.monoRegular, fontSize: 11, ...TABULAR },
+  /** Uppercase micro-label: the terminal's voice. */
+  ticker: { fontFamily: fonts.mono, fontSize: 9, letterSpacing: 1.6, textTransform: 'uppercase' as const },
+
+  // ── sans: chrome
+  body: { fontFamily: fonts.sansRegular, fontSize: 14, lineHeight: 20 },
+  bodyStrong: { fontFamily: fonts.sans, fontSize: 14, lineHeight: 20 },
+  caption: { fontFamily: fonts.sansRegular, fontSize: 12, lineHeight: 17 },
+  button: { fontFamily: fonts.sansBold, fontSize: 14, letterSpacing: 0.2 },
+  kicker: { fontFamily: fonts.sans, fontSize: 10, letterSpacing: 1.4, textTransform: 'uppercase' as const },
+} as const;
+
+// ── Motion ──────────────────────────────────────────────────────────────────
+export const motion = {
+  instant: 120,
+  fast: 200,
+  base: 280,
+  slow: 420,
+  chart: 900,
+  /** Standard ease-out; use for anything entering. */
+  easeOut: [0.22, 0.61, 0.36, 1] as const,
+  stagger: 45,
+} as const;
+
+// ── Elevation ───────────────────────────────────────────────────────────────
+// Shadows are near-absent by design; structure comes from rules. Reserved for
+// genuinely floating surfaces (sheets, modals).
+export const shadows: Record<'none' | 'sheet' | 'raised' | 'accentEdge', ViewStyle> = {
+  none: {},
+  sheet: {
+    shadowColor: '#000',
+    shadowOpacity: 0.6,
+    shadowRadius: 28,
+    shadowOffset: { width: 0, height: -8 },
+    elevation: 12,
   },
   raised: {
-    shadowColor: '#05060A',
-    shadowOpacity: 0.6,
-    shadowRadius: 20,
-    shadowOffset: { width: 0, height: 10 },
-    elevation: 8,
-  },
-  glowAccent: {
-    shadowColor: '#22C9F5',
-    shadowOpacity: 0.35,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: 0 },
-    elevation: 6,
-  },
-  glowUp: {
-    shadowColor: '#2FD48C',
-    shadowOpacity: 0.3,
+    shadowColor: '#000',
+    shadowOpacity: 0.4,
     shadowRadius: 14,
-    shadowOffset: { width: 0, height: 0 },
+    shadowOffset: { width: 0, height: 6 },
     elevation: 6,
   },
-  glowDown: {
-    shadowColor: '#FF5A6B',
-    shadowOpacity: 0.3,
-    shadowRadius: 14,
+  accentEdge: {
+    shadowColor: palette.ochre,
+    shadowOpacity: 0.25,
+    shadowRadius: 12,
     shadowOffset: { width: 0, height: 0 },
-    elevation: 6,
+    elevation: 4,
   },
 };
 
-/** Primary CTA: accent fill, subtle top highlight (light-source cue), soft shadow. */
-export const buttonPrimary: ViewStyle = {
-  backgroundColor: colors.accent,
-  borderRadius: radius.md,
-  height: 50,
-  alignItems: 'center',
-  justifyContent: 'center',
-  ...({
-    shadowColor: '#22C9F5',
-    shadowOpacity: 0.35,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 5,
-  } as ViewStyle),
-};
+// ─────────────────────────────────────────────────────────────────────────────
+// LAYER 3 — COMPONENT RECIPES.
+// ─────────────────────────────────────────────────────────────────────────────
 
-/** Shared card recipe: surface + hairline + soft shadow + grid padding. */
+/** Default surface: a ruled panel, not a floating card. */
 export const card: ViewStyle = {
   backgroundColor: colors.surface,
-  borderColor: colors.border,
+  borderColor: colors.rule,
   borderWidth: 1,
-  borderRadius: radius.lg,
-  padding: spacing.xl - 4, // 20, mobile card baseline on the 4-pt half-step
-  ...shadows.card,
+  borderRadius: radius.md,
+  padding: spacing.lg,
 };
 
-export const theme = { colors, spacing, radius, typography, shadows, card } as const;
+/** A row in a ruled list — the terminal's primary structure. */
+export const listRow: ViewStyle = {
+  paddingVertical: spacing.md,
+  paddingHorizontal: spacing.lg,
+  borderBottomColor: colors.rule,
+  borderBottomWidth: 1,
+};
+
+/** Left edge-stripe marking priority/state (alerts, the edge block). */
+export const edgeStripe = (color: string): ViewStyle => ({
+  borderLeftWidth: 2,
+  borderLeftColor: color,
+});
+
+export const buttonPrimary: ViewStyle = {
+  backgroundColor: colors.accent,
+  borderRadius: radius.sm,
+  height: 48,
+  alignItems: 'center',
+  justifyContent: 'center',
+};
+
+export const buttonGhost: ViewStyle = {
+  borderRadius: radius.sm,
+  height: 48,
+  borderWidth: 1,
+  borderColor: colors.ruleStrong,
+  alignItems: 'center',
+  justifyContent: 'center',
+};
+
+export const theme = {
+  colors,
+  spacing,
+  radius,
+  typography,
+  fonts,
+  motion,
+  shadows,
+  card,
+  listRow,
+} as const;
 export type Theme = typeof theme;

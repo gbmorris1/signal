@@ -4,6 +4,10 @@ import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { useFonts } from 'expo-font';
+import { LibreBodoni_400Regular, LibreBodoni_600SemiBold } from '@expo-google-fonts/libre-bodoni';
+import { JetBrainsMono_400Regular, JetBrainsMono_700Bold } from '@expo-google-fonts/jetbrains-mono';
+import { PublicSans_400Regular, PublicSans_600SemiBold, PublicSans_700Bold } from '@expo-google-fonts/public-sans';
 import { colors } from '@/theme';
 import { AuthProvider, useAuth } from '@/state/auth';
 
@@ -64,6 +68,25 @@ function AuthGate() {
 }
 
 export default function RootLayout() {
+  // Three type roles: serif for reading, mono for data, sans for chrome.
+  const [fontsLoaded] = useFonts({
+    LibreBodoni_400Regular,
+    LibreBodoni_600SemiBold,
+    JetBrainsMono_400Regular,
+    JetBrainsMono_700Bold,
+    PublicSans_400Regular,
+    PublicSans_600SemiBold,
+    PublicSans_700Bold,
+  });
+
+  if (!fontsLoaded) {
+    return (
+      <View style={styles.center}>
+        <ActivityIndicator color={colors.accent} />
+      </View>
+    );
+  }
+
   return (
     <SafeAreaProvider>
       <QueryClientProvider client={queryClient}>

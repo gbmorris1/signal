@@ -229,7 +229,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: spacing.sm,
-    ...shadows.glowAccent,
+    ...shadows.accentEdge,
   },
   logo: { ...typography.display, color: colors.text, fontSize: 30, letterSpacing: 1, textAlign: 'center' },
   tagline: {
@@ -249,7 +249,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xs,
   },
   segmentTab: { flex: 1, paddingVertical: spacing.sm + 2, alignItems: 'center', borderRadius: radius.md - 3 },
-  segmentActive: { backgroundColor: colors.surfaceElevated, ...shadows.card },
+  segmentActive: { backgroundColor: colors.surfaceElevated, ...shadows.raised },
   segmentText: { color: colors.textFaint, fontWeight: '700', fontSize: 12 },
   segmentTextActive: { color: colors.text },
   inputWrap: {

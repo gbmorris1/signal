@@ -241,7 +241,7 @@ export default function MarketDetailScreen() {
         </View>
         <Text style={styles.title}>{market.title}</Text>
 
-        <View style={[styles.card, styles.headlineCard, up ? shadows.glowUp : shadows.glowDown]}>
+        <View style={[styles.card, styles.headlineCard, up ? shadows.none : shadows.none]}>
           <ProbabilityGauge probability={market.probability} up={up} />
           <View style={{ flex: 1, gap: spacing.md }}>
             <OutcomeSplit market={market} size="lg" />
@@ -482,7 +482,7 @@ function Analysis({
   return (
     <View style={{ gap: spacing.md }}>
       {analysis.edge ? (
-        <View style={[styles.card, styles.edgeCard, shadows.glowAccent]}>
+        <View style={[styles.card, styles.edgeCard, shadows.accentEdge]}>
           <View style={styles.edgeHead}>
             <Ionicons name="flash" size={15} color={colors.accent} />
             <Text style={styles.edgeLabel}>ODDIQ'S EDGE</Text>
@@ -731,7 +731,7 @@ const styles = StyleSheet.create({
   },
   statCell: { flex: 1, alignItems: 'center', gap: 2 },
   statDivider: { width: 1, height: 28, backgroundColor: colors.border },
-  statValue: { ...typography.monoLarge, fontSize: 17, color: colors.text },
+  statValue: { ...typography.statLarge, fontSize: 17, color: colors.text },
   statLabel: { fontSize: 10, color: colors.textFaint, letterSpacing: 0.3 },
   scoreLabelRow: { flexDirection: 'row', alignItems: 'center', gap: 3 },
   chartCard: { ...card, gap: spacing.sm },
@@ -783,7 +783,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.sm,
   },
   sourceRowActive: { backgroundColor: colors.accentDim },
-  sourceIndex: { ...typography.mono, color: colors.accent, fontSize: 12 },
+  sourceIndex: { ...typography.stat, color: colors.accent, fontSize: 12 },
   sourceTitle: { ...typography.caption, color: colors.text, lineHeight: 16 },
   sourceDate: { fontSize: 10, color: colors.textFaint, marginTop: 1 },
   gateBody: { ...typography.body, color: colors.textMuted, lineHeight: 21, textTransform: 'capitalize' },
@@ -795,7 +795,7 @@ const styles = StyleSheet.create({
   listRow: { flexDirection: 'row', gap: spacing.sm, alignItems: 'flex-start' },
   metaRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 2 },
   metaLabel: { color: colors.textMuted, ...typography.body },
-  metaValue: { color: colors.text, ...typography.mono },
+  metaValue: { color: colors.text, ...typography.stat },
   confChip: {
     flexDirection: 'row',
     alignItems: 'center',

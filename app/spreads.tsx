@@ -136,7 +136,7 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
   },
   cheapText: { fontSize: 10, fontWeight: '700', color: colors.up },
-  prob: { ...typography.mono, color: colors.text, fontSize: 16 },
+  prob: { ...typography.stat, color: colors.text, fontSize: 16 },
   empty: { alignItems: 'center', gap: spacing.sm, marginTop: spacing.xxl, paddingHorizontal: spacing.xl },
   emptyTitle: { ...typography.heading, color: colors.textMuted },
   emptyBody: { ...typography.caption, color: colors.textFaint, textAlign: 'center', lineHeight: 18 },

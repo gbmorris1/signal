@@ -1,79 +1,87 @@
-import { memo, useRef } from 'react';
-import { Animated, Pressable, Text, View, StyleSheet } from 'react-native';
+import { memo } from 'react';
+import { Pressable, Text, View, StyleSheet } from 'react-native';
 import { router } from 'expo-router';
-import { colors, categoryColors, radius, spacing, typography, card } from '@/theme';
-import { pct, signedPct, compactUsd } from '@/lib/format';
-import { SignalChip, PlatformBadge } from './Chip';
-import { OutcomeSplit } from './OutcomeSplit';
-import type { Market } from '@/types';
+import { colors, categoryColors, radius, spacing, typography } from '@/theme';
+import { signedPct } from '@/lib/format';
+import type { AISignal, Market } from '@/types';
 
+const SIGNAL_LABEL: Record<AISignal, string> = {
+  opportunity: 'Opportunity',
+  watch: 'Watch',
+  neutral: 'Neutral',
+  caution: 'Caution',
+};
+const SIGNAL_COLOR: Record<AISignal, string> = {
+  opportunity: colors.accent,
+  watch: colors.textMuted,
+  neutral: colors.textFaint,
+  caution: colors.warn,
+};
+
+/**
+ * A market as a ruled terminal row: mono metadata up top, the question in
+ * serif (it's the thing you read), a probability bar, and mono numerals for
+ * everything you compare. Rules, not floating cards.
+ */
 function MarketCardInner({ market, reason }: { market: Market; reason?: string }) {
   const up = market.change24h >= 0;
   const flat = Math.round(market.change24h * 100) === 0;
-  const scale = useRef(new Animated.Value(1)).current;
-
-  const pressIn = () =>
-    Animated.spring(scale, { toValue: 0.975, useNativeDriver: true, speed: 40 }).start();
-  const pressOut = () =>
-    Animated.spring(scale, { toValue: 1, useNativeDriver: true, speed: 40 }).start();
+  const pctValue = Math.round(market.probability * 100);
+  const [labelA] = market.outcomeLabels;
 
   return (
-    <Animated.View style={{ transform: [{ scale }] }}>
-      <Pressable
-        style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}
-        onPressIn={pressIn}
-        onPressOut={pressOut}
-        onPress={() => router.push(`/market/${encodeURIComponent(market.id)}`)}
-      >
-        <View style={styles.topRow}>
-          <View style={styles.metaRow}>
-            <PlatformBadge platform={market.platform} />
-            <View
-              style={[styles.catDot, { backgroundColor: categoryColors[market.category] ?? colors.textFaint }]}
-            />
-            <Text style={styles.category}>{market.category.toUpperCase()}</Text>
-          </View>
-          <SignalChip signal={market.signal} />
+    <Pressable
+      style={({ pressed }) => [styles.row, pressed && styles.pressed]}
+      onPress={() => router.push(`/market/${encodeURIComponent(market.id)}`)}
+      accessibilityRole="button"
+      accessibilityLabel={`${market.title}, ${labelA} at ${pctValue} percent`}
+    >
+      <View style={styles.meta}>
+        <View style={styles.metaLeft}>
+          <View
+            style={[
+              styles.catDot,
+              { backgroundColor: categoryColors[market.category] ?? colors.textFaint },
+            ]}
+          />
+          <Text style={styles.metaText} numberOfLines={1}>
+            {market.platform} · {market.category}
+          </Text>
         </View>
-
-        <Text style={styles.title} numberOfLines={2}>
-          {market.title}
+        <Text style={[styles.signal, { color: SIGNAL_COLOR[market.signal] }]}>
+          {SIGNAL_LABEL[market.signal]}
         </Text>
+      </View>
 
-        {reason && (
-          <View style={styles.reasonRow}>
-            <View style={styles.reasonDot} />
-            <Text style={styles.reason} numberOfLines={1}>
-              {reason}
-            </Text>
-          </View>
+      <Text style={styles.question} numberOfLines={2}>
+        {market.title}
+      </Text>
+
+      {reason && (
+        <Text style={styles.reason} numberOfLines={1}>
+          {reason}
+        </Text>
+      )}
+
+      <View style={styles.bar}>
+        <View style={[styles.barFill, { width: `${Math.max(2, Math.min(100, pctValue))}%` }]} />
+      </View>
+
+      <View style={styles.nums}>
+        <Text style={styles.outcome} numberOfLines={1}>
+          <Text style={styles.outcomeLabel}>{labelA} </Text>
+          {pctValue}%
+        </Text>
+        {!flat && (
+          <Text style={[styles.delta, { color: up ? colors.up : colors.down }]}>
+            {signedPct(market.change24h)}
+          </Text>
         )}
-
-        <OutcomeSplit market={market} />
-
-        <View style={styles.bottomRow}>
-          <View style={styles.oddsBlock}>
-            {!flat && (
-              <View
-                style={[styles.deltaPill, { backgroundColor: up ? colors.upDim : colors.downDim }]}
-              >
-                <Text style={[styles.deltaText, { color: up ? colors.up : colors.down }]}>
-                  {signedPct(market.change24h)} today
-                </Text>
-              </View>
-            )}
-          </View>
-          <View style={styles.statBlock}>
-            <Stat label="Vol" value={compactUsd(market.volume)} />
-            <Stat label="Score" value={market.aiScore != null ? String(market.aiScore) : '–'} />
-          </View>
-        </View>
-      </Pressable>
-    </Animated.View>
+      </View>
+    </Pressable>
   );
 }
 
-// Re-render only when the market data or reason actually changes.
 export const MarketCard = memo(
   MarketCardInner,
   (a, b) =>
@@ -83,41 +91,36 @@ export const MarketCard = memo(
     a.reason === b.reason,
 );
 
-function Stat({ label, value }: { label: string; value: string }) {
-  return (
-    <View style={styles.stat}>
-      <Text style={styles.statValue}>{value}</Text>
-      <Text style={styles.statLabel}>{label}</Text>
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
-  card: {
-    ...card,
-    gap: spacing.md,
+  row: {
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    borderBottomColor: colors.rule,
+    borderBottomWidth: 1,
+    gap: spacing.sm,
   },
-  cardPressed: { backgroundColor: colors.surfaceElevated, borderColor: colors.borderStrong },
-  topRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  metaRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  category: { fontSize: 10, fontWeight: '700', letterSpacing: 1, color: colors.textFaint },
-  catDot: { width: 6, height: 6, borderRadius: 3 },
-  title: { ...typography.heading, color: colors.text, lineHeight: 22 },
-  reasonRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: -spacing.xs },
-  reasonDot: { width: 4, height: 4, borderRadius: 2, backgroundColor: colors.accent },
-  reason: { fontSize: 12, color: colors.accent, fontWeight: '600', flex: 1 },
-  bottomRow: {
+  pressed: { backgroundColor: colors.surface },
+  meta: {
     flexDirection: 'row',
+    alignItems: 'center',
     justifyContent: 'space-between',
-    alignItems: 'flex-end',
-    marginTop: spacing.xs,
+    gap: spacing.sm,
   },
-  oddsBlock: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  prob: { ...typography.monoLarge, color: colors.text },
-  deltaPill: { borderRadius: radius.pill, paddingHorizontal: spacing.sm, paddingVertical: 3 },
-  deltaText: { fontSize: 13, fontWeight: '700', fontVariant: ['tabular-nums'] },
-  statBlock: { flexDirection: 'row', gap: spacing.lg },
-  stat: { alignItems: 'flex-end' },
-  statValue: { ...typography.mono, color: colors.textMuted, fontSize: 14 },
-  statLabel: { fontSize: 10, color: colors.textFaint, marginTop: 1 },
+  metaLeft: { flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1 },
+  catDot: { width: 5, height: 5, borderRadius: 1 },
+  metaText: { ...typography.ticker, color: colors.textFaint, flexShrink: 1 },
+  signal: { ...typography.ticker },
+  question: { ...typography.heading, color: colors.text },
+  reason: { ...typography.caption, color: colors.accent, fontSize: 11.5 },
+  bar: { height: 3, backgroundColor: colors.surfaceHigh, borderRadius: radius.xs, overflow: 'hidden' },
+  barFill: { height: 3, backgroundColor: colors.accent, borderRadius: radius.xs },
+  nums: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    justifyContent: 'space-between',
+    gap: spacing.sm,
+  },
+  outcome: { ...typography.stat, color: colors.text, flex: 1 },
+  outcomeLabel: { color: colors.textMuted },
+  delta: { ...typography.statSmall, fontSize: 12 },
 });

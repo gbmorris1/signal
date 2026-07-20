@@ -1,5 +1,5 @@
 import { Text, View, StyleSheet } from 'react-native';
-import { colors, radius } from '@/theme';
+import { colors, radius, typography } from '@/theme';
 import type { Market } from '@/types';
 
 /**
@@ -32,15 +32,17 @@ export function OutcomeSplit({ market, size = 'sm' }: { market: Market; size?: '
 }
 
 const styles = StyleSheet.create({
-  wrap: { gap: 5 },
-  bar: { flexDirection: 'row', height: 6, borderRadius: radius.pill, overflow: 'hidden' },
-  barLg: { height: 8 },
-  segA: { backgroundColor: colors.up, borderRadius: radius.pill },
-  segB: { backgroundColor: colors.down, borderRadius: radius.pill },
-  gap: { width: 3 },
+  wrap: { gap: 6 },
+  // Squared bar: side A carries the accent, side B is neutral ground, so the
+  // eye reads position rather than a red/green value judgement.
+  bar: { flexDirection: 'row', height: 4, overflow: 'hidden' },
+  barLg: { height: 6 },
+  segA: { backgroundColor: colors.accent, borderRadius: radius.xs },
+  segB: { backgroundColor: colors.surfaceHigh, borderRadius: radius.xs },
+  gap: { width: 2 },
   labels: { flexDirection: 'row', justifyContent: 'space-between', gap: 12 },
-  labelA: { fontSize: 12, fontWeight: '600', color: colors.up, flexShrink: 1 },
-  labelB: { fontSize: 12, fontWeight: '600', color: colors.down, flexShrink: 1, textAlign: 'right' },
+  labelA: { ...typography.prose, fontSize: 12.5, color: colors.text, flexShrink: 1 },
+  labelB: { ...typography.prose, fontSize: 12.5, color: colors.textMuted, flexShrink: 1, textAlign: 'right' },
   labelLg: { fontSize: 14 },
-  pct: { fontVariant: ['tabular-nums'] },
+  pct: { ...typography.stat, fontSize: 12.5 },
 });

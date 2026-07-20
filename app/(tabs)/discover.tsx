@@ -117,7 +117,7 @@ export default function DiscoverScreen() {
         <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.accent} />
       }
       ListHeaderComponent={
-        <View style={{ gap: spacing.lg, marginBottom: spacing.md }}>
+        <View style={[styles.header, { gap: spacing.lg, marginBottom: spacing.md }]}>
           <View style={styles.searchWrap}>
             <Ionicons name="search" size={16} color={colors.textFaint} />
             <TextInput
@@ -244,7 +244,6 @@ export default function DiscoverScreen() {
       renderItem={({ item }) =>
         isEventGroup(item) ? <EventCard group={item} /> : <MarketCard market={item} />
       }
-      ItemSeparatorComponent={() => <View style={{ height: spacing.md }} />}
       ListEmptyComponent={
         isLoading ? (
           <CardSkeleton />
@@ -289,7 +288,8 @@ function RailCard({ market }: { market: Market }) {
 }
 
 const styles = StyleSheet.create({
-  content: { padding: spacing.lg, paddingBottom: spacing.xxl },
+  content: { paddingBottom: spacing.xxl },
+  header: { paddingHorizontal: spacing.lg, paddingTop: spacing.md },
   searchWrap: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -327,7 +327,7 @@ const styles = StyleSheet.create({
   },
   railTitle: { fontSize: 13, fontWeight: '700', color: colors.text, lineHeight: 17, minHeight: 34 },
   railStats: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' },
-  railProb: { ...typography.mono, color: colors.text, fontSize: 16 },
+  railProb: { ...typography.stat, color: colors.text, fontSize: 16 },
   railDelta: { fontSize: 12, fontWeight: '700', fontVariant: ['tabular-nums'] },
   segment: {
     flexDirection: 'row',

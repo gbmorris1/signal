@@ -167,7 +167,6 @@ export default function HomeScreen() {
             )}
           </Enter>
         )}
-        ItemSeparatorComponent={() => <View style={{ height: spacing.md }} />}
         ListEmptyComponent={
           isLoading ? (
             <CardSkeleton />
@@ -249,8 +248,8 @@ function Row({ icon, title, body }: { icon: keyof typeof Ionicons.glyphMap; titl
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.bg },
-  content: { padding: spacing.lg, paddingBottom: spacing.xxl },
-  header: { marginBottom: spacing.lg, marginTop: spacing.sm },
+  content: { paddingBottom: spacing.xxl },
+  header: { paddingHorizontal: spacing.lg, marginBottom: spacing.lg, marginTop: spacing.sm },
   kicker: { ...typography.kicker, color: colors.accent, marginBottom: spacing.xs },
   greeting: { ...typography.display, color: colors.text },
   sub: { ...typography.body, color: colors.textMuted, marginTop: spacing.xs },
