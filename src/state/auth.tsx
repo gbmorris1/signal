@@ -77,11 +77,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     (async () => {
-      const { data } = await supabase.auth.getSession();
-      if (data.session?.user) {
-        await loadProfile(data.session.user.id, data.session.user.email ?? null);
+      // MUST always resolve loading. If this throws (offline launch, auth
+      // endpoint unreachable) and we don't clear the flag, AuthGate shows its
+      // spinner forever and the app is unusable rather than merely signed out.
+      try {
+        const { data } = await supabase.auth.getSession();
+        if (data.session?.user) {
+          await loadProfile(data.session.user.id, data.session.user.email ?? null);
+        }
+      } catch (e) {
+        console.warn('session restore failed:', e);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     })();
 
     const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
@@ -103,7 +111,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const loadProfile = useCallback(async (id: string, email: string | null) => {
     const supabase = getSupabase();
     if (!supabase) return;
-    const { data } = await supabase.from('users').select('*').eq('id', id).maybeSingle();
+    const { data, error } = await supabase.from('users').select('*').eq('id', id).maybeSingle();
+    // A FAILED read is not the same as "no row". Treating them the same meant a
+    // transient error fell through to the create branch below and upserted
+    // `onboarded: false` over an existing profile — silently bouncing a
+    // returning user back through onboarding.
+    if (error) {
+      console.warn('profile read failed, leaving profile untouched:', error.message);
+      return;
+    }
     if (data) {
       setProfile({
         id: data.id,
