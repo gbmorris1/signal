@@ -167,20 +167,6 @@ export default function DiscoverScreen() {
             )}
           </View>
 
-          {!searching && (
-            <Pressable
-              style={styles.spreadsBtn}
-              onPress={() => router.push('/spreads')}
-              accessibilityRole="button"
-              accessibilityLabel="View cross-platform spreads"
-            >
-              <Ionicons name="swap-horizontal" size={15} color={colors.accent} />
-              <Text style={styles.spreadsText}>Cross-platform spreads</Text>
-              <View style={{ flex: 1 }} />
-              <Ionicons name="chevron-forward" size={14} color={colors.textFaint} />
-            </Pressable>
-          )}
-
           {/* Folded into the Movers segment rather than always-on: four
               stacked filter rows above the first result was too much chrome
               on every visit to Trending/AI picks. */}
@@ -329,17 +315,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
   },
   search: { flex: 1, paddingVertical: spacing.md, color: colors.text, ...typography.body },
-  spreadsBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    borderColor: colors.rule,
-    borderWidth: 1,
-    borderRadius: radius.xs,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.md,
-  },
-  spreadsText: { ...typography.heading, fontSize: 14, color: colors.text },
   railBlock: { minHeight: 124 },
   railLabel: { ...typography.ticker, color: colors.textFaint, marginBottom: spacing.sm },
   rail: { gap: spacing.sm, paddingRight: spacing.lg },

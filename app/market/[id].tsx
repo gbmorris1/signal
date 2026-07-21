@@ -311,15 +311,28 @@ export default function MarketDetailScreen() {
         <Text style={styles.cardLabel}>Platform availability</Text>
         <CompareRow label={market.platform} probability={market.probability} highlight />
         {comparables.length > 0 ? (
-          comparables.map((c: Market) => (
-            <Pressable key={c.id} onPress={() => router.push(`/market/${encodeURIComponent(c.id)}`)}>
-              <CompareRow
-                label={c.platform}
-                probability={c.probability}
-                spread={c.probability - market.probability}
-              />
-            </Pressable>
-          ))
+          <>
+            {comparables.map((c: Market) => (
+              <Pressable
+                key={c.id}
+                onPress={() => router.push(`/market/${encodeURIComponent(c.id)}`)}
+              >
+                <CompareRow
+                  label={c.platform}
+                  probability={c.probability}
+                  spread={c.probability - market.probability}
+                />
+              </Pressable>
+            ))}
+            {/* Carried over from the removed spreads screen: the caveat is the
+                most important thing on this panel. A gap is research, not an
+                arb, and saying so is what keeps this honest. */}
+            <Text style={styles.compareEmpty}>
+              A gap usually means the two venues resolve on{' '}
+              <Text style={styles.compareEmphasis}>different criteria</Text> — read both before
+              assuming it&rsquo;s free money.
+            </Text>
+          </>
         ) : (
           // Deliberately claims only what we know. The matcher fails closed, so
           // "no equivalent found" is honest where "no equivalent exists" would
@@ -761,6 +774,7 @@ const styles = StyleSheet.create({
   aboutText: { ...typography.prose, color: colors.textMuted },
   aboutMore: { ...typography.caption, color: colors.accent, marginTop: 2 },
   compareEmpty: { ...typography.caption, color: colors.textMuted, lineHeight: 18 },
+  compareEmphasis: { color: colors.text, fontFamily: typography.heading.fontFamily },
   thisMarket: { ...typography.ticker, fontSize: 8.5, color: colors.textFaint },
   externalBtn: {
     flexDirection: 'row',

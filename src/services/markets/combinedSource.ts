@@ -56,55 +56,16 @@ export class CombinedSource implements MarketDataSource {
       .map((x) => x.m);
   }
 
-  /**
-   * Cross-platform spread scanner. Pairs each Polymarket market with its best
-   * Kalshi match (higher overlap bar than findComparables - a wrong pairing
-   * would show a phantom "spread"), keeps pairs whose implied probabilities
-   * differ by >= minGap, and ranks by gap. Each Kalshi market is used once.
-   * Note: a wide spread often reflects DIFFERENT resolution criteria between
-   * venues, not free money - the UI frames these as research, not arbitrage.
-   */
-  async findSpreads(minGap = 0.04): Promise<SpreadPair[]> {
-    const all = await this.listMarkets();
-    const poly = all.filter((m) => m.platform === 'polymarket');
-    const kalshi = all.filter((m) => m.platform === 'kalshi');
-    if (poly.length === 0 || kalshi.length === 0) return [];
-
-    const kalshiKeys = kalshi.map((k) => ({ k, keys: titleKeywords(k.title) }));
-    const used = new Set<string>();
-    const pairs: SpreadPair[] = [];
-    for (const p of poly) {
-      const pk = titleKeywords(p.title);
-      let best: Market | undefined;
-      let bestRatio = 0;
-      for (const { k, keys } of kalshiKeys) {
-        if (k.category !== p.category || used.has(k.id)) continue;
-        const s = matchStats(pk, keys);
-        // Arb must be the SAME question, not a topically-similar one, AND the
-        // same outcome of it — a phantom spread against a multi-outcome leg is
-        // the worst thing this screen could show.
-        if (isSameQuestionStrict(p, k, s) && s.minRatio > bestRatio) {
-          bestRatio = s.minRatio;
-          best = k;
-        }
-      }
-      if (!best) continue;
-      const gap = Math.abs(p.probability - best.probability);
-      if (gap < minGap) continue;
-      used.add(best.id);
-      // `cheaper` = the venue where YES is priced lower (the side you'd buy).
-      const cheaper = p.probability <= best.probability ? p : best;
-      pairs.push({ polymarket: p, kalshi: best, gapPts: Math.round(gap * 100), cheaper: cheaper.platform });
-    }
-    return pairs.sort((a, b) => b.gapPts - a.gapPts).slice(0, 40);
-  }
-}
-
-export interface SpreadPair {
-  polymarket: Market;
-  kalshi: Market;
-  gapPts: number;
-  cheaper: 'polymarket' | 'kalshi';
+  // A `findSpreads` scanner and a dedicated /spreads screen used to live here.
+  // Both were removed 2026-07-20 after measuring the matcher against the live
+  // catalogues: across 183k comparisons exactly ONE genuine cross-venue pair
+  // existed, so the screen was permanently empty even at its own threshold —
+  // and every relaxation of that threshold produced phantom spreads against
+  // different questions. Cross-venue comparison now lives where it is actually
+  // useful and self-limiting: the "Platform availability" panel on the market
+  // screen, via findComparables above, which shows a second venue only when the
+  // question AND its outcome match, and states the different-criteria caveat.
+  // Reviving a scanner needs structural matching first — see isSameQuestion.
 }
 
 const STOP = new Set([
