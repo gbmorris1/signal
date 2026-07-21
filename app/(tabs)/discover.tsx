@@ -20,8 +20,15 @@ import { EventCard } from '@/components/EventCard';
 import { CardSkeleton } from '@/components/Skeleton';
 import { PlatformBadge } from '@/components/Chip';
 import { groupMarkets, isEventGroup } from '@/services/markets/grouping';
+import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import { pct, signedPct } from '@/lib/format';
 import type { Category, Market } from '@/types';
+
+/** First occurrence of each id wins, so callers control precedence by order. */
+function dedupeById(markets: Market[]): Market[] {
+  const seen = new Set<string>();
+  return markets.filter((m) => (seen.has(m.id) ? false : (seen.add(m.id), true)));
+}
 
 const CATEGORIES: (Category | 'all')[] = [
   'all',
@@ -62,6 +69,18 @@ export default function DiscoverScreen() {
     queryFn: () => source.listMarkets(),
   });
 
+  // The browse feed is only the top markets by volume. Searching must reach the
+  // whole catalogue, or a real market a user types in looks like it doesn't
+  // exist. Debounced so typing costs one request, not one per keystroke.
+  const debouncedQuery = useDebouncedValue(query.trim());
+  const remoteEnabled = debouncedQuery.length >= 2;
+  const { data: remote = [], isFetching: remoteFetching } = useQuery<Market[]>({
+    queryKey: ['markets', 'search', debouncedQuery],
+    queryFn: () => source.listMarkets({ query: debouncedQuery }),
+    enabled: remoteEnabled,
+    staleTime: 60_000,
+  });
+
   const onRefresh = useCallback(async () => {
     void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setRefreshing(true);
@@ -77,10 +96,18 @@ export default function DiscoverScreen() {
   const sorted = useMemo(() => {
     const q = query.toLowerCase();
     const bandTest = ODDS_BANDS.find((b) => b.key === oddsBand)!.test;
-    const filtered = data
+    // Substring-match the catalogue for instant feedback, then union with the
+    // remote hits. The title filter deliberately does NOT apply to remote
+    // results: Polymarket's search matches on more than the title, so filtering
+    // them by substring would throw away the very markets we went out to find.
+    // Local first — they're already on screen, so nothing reshuffles when the
+    // request lands.
+    const pool = searching
+      ? dedupeById([...data.filter((m: Market) => m.title.toLowerCase().includes(q)), ...remote])
+      : data;
+    const filtered = pool
       .filter((m: Market) => (category === 'all' ? true : m.category === category))
-      .filter((m: Market) => bandTest(m.probability))
-      .filter((m: Market) => (searching ? m.title.toLowerCase().includes(q) : true));
+      .filter((m: Market) => bandTest(m.probability));
     return filtered
       .sort((a, b) => {
         if (section === 'movers') return Math.abs(b.change24h) - Math.abs(a.change24h);
@@ -88,7 +115,7 @@ export default function DiscoverScreen() {
         return b.volume - a.volume; // trending
       })
       .slice(0, 100);
-  }, [data, category, section, oddsBand, query, searching]);
+  }, [data, remote, category, section, oddsBand, query, searching]);
 
   // Collapse multi-outcome legs into single event cards for the feed.
   const items = useMemo(() => groupMarkets(sorted), [sorted]);
@@ -245,7 +272,9 @@ export default function DiscoverScreen() {
         isEventGroup(item) ? <EventCard group={item} /> : <MarketCard market={item} />
       }
       ListEmptyComponent={
-        isLoading ? (
+        // Don't declare "nothing matches" while the catalogue search is still in
+        // flight — that's the exact false negative this whole change fixes.
+        isLoading || (searching && remoteFetching) ? (
           <CardSkeleton />
         ) : (
           <View style={styles.empty}>
@@ -253,7 +282,7 @@ export default function DiscoverScreen() {
             <Text style={styles.emptyTitle}>Nothing matches</Text>
             <Text style={styles.emptyBody}>
               {searching
-                ? `No markets match “${query}”. Try a broader term like “Fed” or “Bitcoin”.`
+                ? `No open markets match “${query}” on Polymarket or Kalshi. Try a broader term like “Fed” or “Bitcoin”.`
                 : oddsBand !== 'any' || category !== 'all'
                   ? 'No markets match these filters. Try widening the odds band or category.'
                   : 'No markets right now. Check back after the next sync.'}

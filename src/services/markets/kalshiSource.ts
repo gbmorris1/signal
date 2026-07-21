@@ -35,6 +35,10 @@ export class KalshiSource implements MarketDataSource {
 
     if (params?.category) markets = markets.filter((m) => m.category === params.category);
     if (params?.query) {
+      // Local-only, unlike PolymarketSource which searches the full catalogue
+      // remotely: Kalshi exposes no public text-search endpoint, so this window
+      // of open events IS everything we can see. Searching here therefore can't
+      // reach beyond it.
       const q = params.query.toLowerCase();
       markets = markets.filter((m) => m.title.toLowerCase().includes(q));
     }

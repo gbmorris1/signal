@@ -17,6 +17,42 @@ const CLOB_BASE = 'https://clob.polymarket.com';
 export class PolymarketSource implements MarketDataSource {
   readonly platform = 'polymarket' as const;
   private cache: Market[] = [];
+  /**
+   * Markets resolved individually (by search or by slug) rather than from the
+   * browse catalog. Kept OUT of `cache` on purpose: `cache` doubles as the
+   * last-good-live fallback for the whole catalog, and one searched market must
+   * never end up standing in for the browse feed.
+   */
+  private resolved = new Map<string, Market>();
+
+  private toMarkets(raw: PolymarketRaw[]): Market[] {
+    return raw
+      .map(mapPolymarketMarket)
+      .filter((m): m is Market => m !== null)
+      .filter((m) => isLiveProbability(m.probability));
+  }
+
+  /**
+   * Full-catalog search. The browse endpoint only ever returns the top N by
+   * volume, so without this a user searching for anything outside that window
+   * gets an empty state that reads as "this market doesn't exist" rather than
+   * "not in our catalog" — on a product whose whole pitch is research.
+   *
+   * `public-search` returns EVENTS with their markets nested, in the same shape
+   * the browse endpoint returns, so the normal mapper applies (it already drops
+   * closed markets).
+   */
+  private async searchRemote(query: string): Promise<Market[]> {
+    const url = `${GAMMA_BASE}/public-search?q=${encodeURIComponent(query)}&limit_per_type=20`;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`gamma search ${res.status}`);
+    const json = (await res.json()) as { events?: Array<{ markets?: PolymarketRaw[] }> };
+    const events = Array.isArray(json?.events) ? json.events : [];
+    const raw = events.flatMap((e) => (Array.isArray(e?.markets) ? e.markets : []));
+    const markets = this.toMarkets(raw.filter((m) => m.active !== false));
+    for (const m of markets) this.resolved.set(m.id, m);
+    return markets;
+  }
 
   async listMarkets(params?: { category?: Category; query?: string }): Promise<Market[]> {
     let markets: Market[];
@@ -25,29 +61,60 @@ export class PolymarketSource implements MarketDataSource {
       const res = await fetch(url);
       if (!res.ok) throw new Error(`gamma ${res.status}`);
       const raw = (await res.json()) as PolymarketRaw[];
-      markets = raw
-        .map(mapPolymarketMarket)
-        .filter((m): m is Market => m !== null)
-        .filter((m) => isLiveProbability(m.probability));
+      markets = this.toMarkets(raw);
       if (markets.length === 0) throw new Error('empty');
       this.cache = markets;
     } catch {
       markets = this.cache; // stale-but-real beats fabricated; [] on first failure
     }
 
-    if (params?.category) markets = markets.filter((m) => m.category === params.category);
-    if (params?.query) {
-      const q = params.query.toLowerCase();
-      markets = markets.filter((m) => m.title.toLowerCase().includes(q));
+    const q = params?.query?.trim().toLowerCase();
+    if (q) {
+      const local = markets.filter((m) => m.title.toLowerCase().includes(q));
+      let remote: Market[] = [];
+      try {
+        remote = await this.searchRemote(q);
+      } catch {
+        // Search is additive: a failed lookup still leaves the local matches,
+        // which is strictly better than surfacing an error over usable results.
+        remote = [];
+      }
+      // Catalog hits first — they carry the browse ordering the user just saw.
+      const seen = new Set(local.map((m) => m.id));
+      markets = [...local, ...remote.filter((m) => !seen.has(m.id))];
     }
+
+    if (params?.category) markets = markets.filter((m) => m.category === params.category);
     return markets;
   }
 
+  /**
+   * Fetches one market by slug, so anything outside the browse window is still
+   * reachable by id — which is what deep links and saved watchlist entries need.
+   */
+  private async fetchBySlug(id: string): Promise<Market | null> {
+    const slug = id.replace(/^polymarket:/, '');
+    try {
+      const res = await fetch(`${GAMMA_BASE}/markets?slug=${encodeURIComponent(slug)}`);
+      if (!res.ok) return null;
+      const raw = (await res.json()) as PolymarketRaw[];
+      const market = this.toMarkets(Array.isArray(raw) ? raw : [])[0] ?? null;
+      if (market) this.resolved.set(market.id, market);
+      return market;
+    } catch {
+      return null;
+    }
+  }
+
   async getMarket(id: string): Promise<Market | null> {
-    const cached = this.cache.find((m) => m.id === id);
+    const cached = this.cache.find((m) => m.id === id) ?? this.resolved.get(id);
     if (cached) return cached;
     const all = await this.listMarkets();
-    return all.find((m) => m.id === id) ?? null;
+    const hit = all.find((m) => m.id === id);
+    if (hit) return hit;
+    // Not in the top-N browse window — ask for it directly rather than
+    // reporting a real market as missing.
+    return this.fetchBySlug(id);
   }
 
   async getHistory(id: string): Promise<MarketHistory> {
