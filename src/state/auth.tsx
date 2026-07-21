@@ -11,6 +11,7 @@ import Constants from 'expo-constants';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getSupabase, hasSupabase } from '@/lib/supabase';
 import { setAnalyticsUser } from '@/lib/analytics';
+import { setMonitoringUser } from '@/lib/monitoring';
 import { getSubscriptionService } from '@/services/subscriptions';
 import type { Category, ExperienceLevel, UserPreferences, UserProfile } from '@/types';
 
@@ -56,6 +57,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // RevenueCat webhook records entitlements against this user id.
   useEffect(() => {
     setAnalyticsUser(profile?.id ?? null);
+    // Id only — never the email. Lets a crash be traced to an account without
+    // shipping personal data to a third party.
+    setMonitoringUser(profile?.id ?? null);
     if (profile?.id) {
       const svc = getSubscriptionService();
       void svc.identify?.(profile.id);

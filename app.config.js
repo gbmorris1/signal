@@ -43,6 +43,10 @@ module.exports = () => {
     supabaseUrl: env.EXPO_PUBLIC_SUPABASE_URL ?? appJson.expo.extra.supabaseUrl,
     supabaseAnonKey: env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? appJson.expo.extra.supabaseAnonKey,
     revenueCatIosKey: env.EXPO_PUBLIC_REVENUECAT_IOS_KEY ?? appJson.expo.extra.revenueCatIosKey,
+    // Absent is a valid state: monitoring no-ops rather than failing. Not in the
+    // EAS build assertion for that reason — a missing DSN loses crash reports,
+    // it doesn't ship a broken app the way a missing Supabase URL does.
+    sentryDsn: env.EXPO_PUBLIC_SENTRY_DSN ?? null,
     // Flags: default to live data whenever a Supabase URL is provided.
     useMockData: bool(env.EXPO_PUBLIC_USE_MOCK_DATA, !env.EXPO_PUBLIC_SUPABASE_URL),
     useLiveData: bool(env.EXPO_PUBLIC_USE_LIVE_DATA, !!env.EXPO_PUBLIC_SUPABASE_URL),

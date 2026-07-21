@@ -10,6 +10,11 @@ import { JetBrainsMono_400Regular, JetBrainsMono_700Bold } from '@expo-google-fo
 import { PublicSans_400Regular, PublicSans_600SemiBold, PublicSans_700Bold } from '@expo-google-fonts/public-sans';
 import { colors } from '@/theme';
 import { AuthProvider, useAuth } from '@/state/auth';
+import { initMonitoring, withMonitoring } from '@/lib/monitoring';
+
+// Before any component renders, so a crash during the first paint is still
+// reported. No-ops when no DSN is configured.
+initMonitoring();
 
 const queryClient = new QueryClient();
 
@@ -66,7 +71,7 @@ function AuthGate() {
   );
 }
 
-export default function RootLayout() {
+function RootLayout() {
   // Three type roles: serif for reading, mono for data, sans for chrome.
   const [fontsLoaded] = useFonts({
     LibreBodoni_400Regular,
@@ -97,6 +102,10 @@ export default function RootLayout() {
     </SafeAreaProvider>
   );
 }
+
+// Sentry's error boundary reports render crashes that would otherwise show as a
+// blank screen with nothing to diagnose. Identity when no DSN is set.
+export default withMonitoring(RootLayout);
 
 const styles = StyleSheet.create({
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.bg },

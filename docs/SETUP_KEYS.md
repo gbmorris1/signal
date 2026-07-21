@@ -112,6 +112,34 @@ eas env:create --environment production --name EXPO_PUBLIC_REVENUECAT_IOS_KEY --
 ```
 Repeat with `--environment preview` (and `development`) for those build profiles.
 
+**2c. Sentry (crash + error reporting).** Wired in `src/lib/monitoring.ts`; no-ops
+entirely until a DSN exists, so nothing breaks before you set it up.
+
+1. Create a Sentry project (platform: React Native) → copy the **DSN**.
+2. `eas env:create --environment production --name EXPO_PUBLIC_SENTRY_DSN --value <dsn>`
+   (repeat for `preview`). Add `EXPO_PUBLIC_SENTRY_DSN=<dsn>` to local `.env` only if you
+   want reports from `expo start` — normally you don't.
+3. **Source maps, or the reports are useless.** A production bundle is minified, so
+   without an upload every stack trace is `index.android.bundle:1:284736`. Create an
+   auth token (Sentry → Settings → Auth Tokens, scope `project:releases`) and set it as
+   a build-time secret — NOT an `EXPO_PUBLIC_` var, it must not reach the client:
+   ```bash
+   eas env:create --environment production --name SENTRY_AUTH_TOKEN --value <token> --type secret
+   ```
+   The `@sentry/react-native` config plugin uploads maps during the EAS build once that
+   token is present.
+
+Notes:
+- **Expo Go can't load Sentry's native module**, so monitoring runs JS-only there
+  (`enableNative: false`). Native crashes are only captured in an EAS build.
+- Reports are scrubbed before sending: no email, username, IP, cookies or headers, and
+  console breadcrumbs are dropped (they can contain auth payloads). The account **id**
+  is kept so a crash is traceable to a user. Pinned by tests in
+  `src/lib/__tests__/monitoring.test.ts`.
+- `legal/privacy.html` declares the Diagnostics category and Sentry as a sub-processor.
+  **Also tick "Diagnostics → Crash Data / Performance Data" in App Store Connect's App
+  Privacy questionnaire** — the policy and the nutrition label have to agree.
+
 **3. RevenueCat dashboard → Integrations → Webhooks:**
 - URL: `https://aanhvekseyfsecezxgne.supabase.co/functions/v1/revenuecat-webhook`
 - Authorization header value: the same `RC_WEBHOOK_SECRET`
