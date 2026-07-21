@@ -122,6 +122,13 @@ function detectMove(title: string, prior: number, current: number): Detected | n
   };
 }
 
+// ── MIRROR of src/lib/volumeSpike.ts ─────────────────────────────────────────
+// That module is the TESTED source of truth (17 tests, incl. regressions for the
+// vacuous-multiplier, market-age, rolling-window and restatement defects). Deno
+// can't import app code, so the logic is duplicated here verbatim — the same
+// arrangement scoring.ts ↔ resolve-predictions uses. CHANGE BOTH TOGETHER.
+// A test asserts the constants below match; it does not compare the bodies.
+
 function median(xs: number[]): number {
   if (xs.length === 0) return 0;
   const s = [...xs].sort((a, b) => a - b);
@@ -129,9 +136,44 @@ function median(xs: number[]): number {
   return s.length % 2 ? s[mid] : (s[mid - 1] + s[mid]) / 2;
 }
 
+function intervalDeltas(priorVolsNewestFirst: number[]): number[] {
+  const out: number[] = [];
+  for (let i = priorVolsNewestFirst.length - 1; i > 0; i--) {
+    const d = priorVolsNewestFirst[i - 1] - priorVolsNewestFirst[i];
+    if (Number.isFinite(d)) out.push(d);
+  }
+  return out;
+}
+
+/** True when the newest interval is anomalous for THIS market. */
+function isVolumeSpike(current: number, priorVolsNewestFirst: number[]): boolean {
+  const prev0 = priorVolsNewestFirst[0];
+  const curDelta = current - prev0;
+  if (!(prev0 > 0)) return false;
+  if (!(curDelta > 0)) return false;
+
+  const deltas = intervalDeltas(priorVolsNewestFirst);
+  // A market that just entered the top-N by volume has no history. Staying silent
+  // beats guessing at what's normal for it.
+  if (deltas.length < VOLUME_BASELINE_MIN_SAMPLES) return false;
+
+  // Only positive intervals describe trading activity; zero-volume windows would
+  // drag the median to 0 and make every subsequent trade look like a spike.
+  const baseline = median(deltas.filter((d) => d > 0));
+  if (!(baseline > 0)) return false;
+
+  // A single interval cannot legitimately exceed the market's entire prior lifetime
+  // volume. Rejects tiny-denominator noise and venue-side restatements of the series
+  // (e.g. the Kalshi rolling→cumulative switch, which manufactures one enormous
+  // delta and would otherwise alert every Kalshi market at once).
+  if (curDelta > prev0) return false;
+  return curDelta / baseline >= VOLUME_BASELINE_MULT;
+}
+// ── end mirror ───────────────────────────────────────────────────────────────
+
 /**
  * Cumulative volumes, most-recent-prior first. BOTH sources must supply a
- * lifetime-cumulative figure (see fetchKalshi) or the deltas below are meaningless.
+ * lifetime-cumulative figure (see fetchKalshi) or the deltas are meaningless.
  */
 function detectVolumeSpike(
   title: string,
@@ -139,32 +181,7 @@ function detectVolumeSpike(
   prob: number,
   priorVols: number[],
 ): Detected | null {
-  const [prev0] = priorVols;
-  const curDelta = current - prev0;
-  if (!(prev0 > 0) || curDelta <= 0) return null;
-
-  // Per-interval deltas across the prior window, oldest→newest.
-  const deltas: number[] = [];
-  for (let i = priorVols.length - 1; i > 0; i--) {
-    const d = priorVols[i - 1] - priorVols[i];
-    if (Number.isFinite(d)) deltas.push(d);
-  }
-  // Too little history to know what "normal" is for this market. Staying silent
-  // beats guessing: a market that just entered the top-N by volume has no baseline.
-  if (deltas.length < VOLUME_BASELINE_MIN_SAMPLES) return null;
-
-  const base = median(deltas.filter((d) => d > 0));
-  if (!(base > 0)) return null;
-  if (curDelta < VOLUME_BASELINE_MULT * base) return null;
-
-  // Sanity bound: a single 15-min interval cannot legitimately exceed the market's
-  // entire prior lifetime volume. This rejects two real classes of false positive —
-  // brand-new markets whose tiny denominator produced ratios in the thousands, and
-  // any venue-side accounting change that restates the volume series (e.g. the
-  // Kalshi rolling→cumulative field switch, which manufactures exactly one enormous
-  // delta and would otherwise alert every Kalshi market at once).
-  if (curDelta > prev0) return null;
-
+  if (!isVolumeSpike(current, priorVols)) return null;
   return {
     kind: 'volume_spike',
     title: `Unusual volume on ${title}`,
