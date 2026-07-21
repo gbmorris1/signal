@@ -321,9 +321,13 @@ export default function MarketDetailScreen() {
             </Pressable>
           ))
         ) : (
+          // Deliberately claims only what we know. The matcher fails closed, so
+          // "no equivalent found" is honest where "no equivalent exists" would
+          // be asserting a fact we haven't established.
           <Text style={styles.compareEmpty}>
-            Only listed on {market.platform === 'polymarket' ? 'Polymarket' : 'Kalshi'}, with no
-            equivalent market on {market.platform === 'polymarket' ? 'Kalshi' : 'Polymarket'}.
+            No matching {market.platform === 'polymarket' ? 'Kalshi' : 'Polymarket'} market
+            identified. A second venue is shown only when the question and its outcome match
+            exactly — near-misses price different questions.
           </Text>
         )}
         <Pressable

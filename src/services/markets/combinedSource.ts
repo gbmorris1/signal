@@ -47,7 +47,10 @@ export class CombinedSource implements MarketDataSource {
     return all
       .filter((m) => m.platform !== market.platform && m.category === market.category)
       .map((m) => ({ m, s: matchStats(keys, titleKeywords(m.title)) }))
-      .filter((x) => isSameQuestion(x.s, 0.55))
+      // Was 0.55, which measured at ~8% precision and put another venue's price
+      // for a DIFFERENT question — sometimes the complement — on the detail
+      // screen as "Platform availability". Now the same strict bar as spreads.
+      .filter((x) => isSameQuestionStrict(market, x.m, x.s))
       .sort((a, b) => b.s.minRatio - a.s.minRatio)
       .slice(0, 2)
       .map((x) => x.m);
@@ -77,9 +80,10 @@ export class CombinedSource implements MarketDataSource {
       for (const { k, keys } of kalshiKeys) {
         if (k.category !== p.category || used.has(k.id)) continue;
         const s = matchStats(pk, keys);
-        // Arb must be the SAME question, not a topically-similar one: require
-        // two shared distinctive tokens and heavy two-way overlap.
-        if (isSameQuestion(s, 0.72) && s.minRatio > bestRatio) {
+        // Arb must be the SAME question, not a topically-similar one, AND the
+        // same outcome of it — a phantom spread against a multi-outcome leg is
+        // the worst thing this screen could show.
+        if (isSameQuestionStrict(p, k, s) && s.minRatio > bestRatio) {
           bestRatio = s.minRatio;
           best = k;
         }
@@ -158,11 +162,60 @@ export function matchStats(a: Map<string, number>, b: Map<string, number>): Matc
 
 /**
  * Two markets are the same question when they share at least two tokens (one of
- * them distinctive) and most of BOTH titles overlaps. `minOverlap` sets how
- * strict - comparables are lenient, arbitrage is strict.
+ * them distinctive) and most of BOTH titles overlaps.
+ *
+ * ⚠️ MEASURED 2026-07-20 against the live catalogues (329 Polymarket × 558 Kalshi
+ * = 183k comparisons). Title-token overlap does NOT identify cross-venue
+ * questions, and no choice of `minOverlap` fixes it:
+ *
+ *   • Exactly ONE genuine same-question pair existed in the entire live data
+ *     ("Will the Democrats win the 2028 US Presidential Election?" ↔ "2028
+ *     Presidential Election winner? (Party) · Democratic party"). At the old
+ *     0.55 bar, 13 pairs matched — precision ≈ 8%.
+ *   • That true pair scores 0.67, and so do SEVEN false ones, including
+ *     "· Marco Rubio" and "· Republican party" — the literal complement. The
+ *     score ties across right and wrong answers, so it is not discriminative
+ *     at any threshold.
+ *
+ * The cause is structural: Kalshi titles are `Event · Outcome` composites, so
+ * the identifying part (the outcome) is a few tokens swamped by the shared
+ * event words, while the venues also differ on resolution criteria (a party
+ * nomination vs winning the election; one House district vs chamber control).
+ *
+ * The bar is therefore set where nothing spurious survives. Both callers now
+ * fail CLOSED — showing no cross-venue price is correct; showing the
+ * complement's price as "the same question elsewhere" is worse than silence in
+ * a research product, since it reads as an enormous free spread.
+ *
+ * Doing this properly needs entity-level matching (normalized subject, outcome
+ * and resolution date) or embeddings — not a token ratio.
  */
+export const SAME_QUESTION_MIN_OVERLAP = 0.72;
+
 export function isSameQuestion(s: MatchStats, minOverlap: number): boolean {
   return s.shared >= 2 && s.sharedDistinct >= 1 && s.minRatio >= minOverlap;
+}
+
+/**
+ * Guards the specific failure that produced the worst false positives: pairing a
+ * binary market with ONE LEG of a multi-outcome event. The leg's identity lives
+ * in `outcomeLabel` ("Marco Rubio", "Republican party"), which barely moves the
+ * title ratio — so "Democrats win 2028" matched the Republican leg as strongly
+ * as the Democratic one. If a candidate is such a leg, its outcome must be
+ * confirmed in the other title, or the pair is rejected.
+ */
+export function outcomeConfirmed(candidate: Market, otherTitle: string): boolean {
+  if (!candidate.outcomeLabel) return true; // plain binary — nothing to confirm
+  const tokens = [...titleKeywords(candidate.outcomeLabel).keys()];
+  if (tokens.length === 0) return false;
+  const hay = otherTitle.toLowerCase();
+  return tokens.every((t) => hay.includes(t));
+}
+
+/** Same question AND, for multi-outcome legs, the same OUTCOME of it. */
+export function isSameQuestionStrict(a: Market, b: Market, s: MatchStats): boolean {
+  if (!isSameQuestion(s, SAME_QUESTION_MIN_OVERLAP)) return false;
+  return outcomeConfirmed(a, b.title) && outcomeConfirmed(b, a.title);
 }
 
 /** Legacy one-sided overlap, kept for callers that only need a rough score. */
