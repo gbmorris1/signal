@@ -97,6 +97,21 @@ npx supabase functions deploy revenuecat-webhook --no-verify-jwt
 npx supabase secrets set RC_WEBHOOK_SECRET=<random>
 ```
 
+**2b. ⚠️ EAS builds do NOT read `.env`.** It's git-ignored, so it is never uploaded, and
+EAS does not load local env files. Without EAS environment variables, `app.config.js`
+falls back to app.json's placeholders — which flips the app to `useMockData: true` with
+an unusable Supabase URL, i.e. a TestFlight build showing **fabricated markets as live
+prices**, with no auth. It looks fine locally, because `expo start` does read `.env`.
+
+`app.config.js` now fails the build loudly rather than shipping that. Before the first
+EAS build, set the variables (never commit values — this repo is public):
+```bash
+eas env:create --environment production --name EXPO_PUBLIC_SUPABASE_URL --value <url>
+eas env:create --environment production --name EXPO_PUBLIC_SUPABASE_ANON_KEY --value <anon-key>
+eas env:create --environment production --name EXPO_PUBLIC_REVENUECAT_IOS_KEY --value <rc-key>
+```
+Repeat with `--environment preview` (and `development`) for those build profiles.
+
 **3. RevenueCat dashboard → Integrations → Webhooks:**
 - URL: `https://aanhvekseyfsecezxgne.supabase.co/functions/v1/revenuecat-webhook`
 - Authorization header value: the same `RC_WEBHOOK_SECRET`
